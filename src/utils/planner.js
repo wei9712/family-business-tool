@@ -11,7 +11,11 @@ export function createRecipeOptions(data) {
   ].sort((a, b) => a.level - b.level || a.type.localeCompare(b.type, 'zh-Hant') || a.name.localeCompare(b.name, 'zh-Hant'));
 }
 
-export function calculateTaskPlan(tasks, manualMaterials, data) {
+const SEEDS_PER_FIELD = 16;
+
+export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {}) {
+  const fieldCount = clampFieldCount(farmSettings.fieldCount);
+  const fertilizerEnabled = Boolean(farmSettings.fertilizerEnabled);
   const recipeMap = createRecipeMap(data);
   const cropMap = createCropMap(data.cropTimes);
   const directMaterials = new Map();
@@ -53,17 +57,29 @@ export function calculateTaskPlan(tasks, manualMaterials, data) {
     cropNeeds: toRows(cropNeeds).map((row) => {
       const crop = cropMap.get(row.name);
       const hoursPerSeed = crop ? crop.hours : 0;
-      const yieldPerSeed = crop ? crop.yieldPerSeed : 0;
+      const baseYieldPerSeed = crop ? crop.yieldPerSeed : 0;
+      const yieldPerSeed = fertilizerEnabled ? round(baseYieldPerSeed * 1.1) : baseYieldPerSeed;
       const seedsNeeded = yieldPerSeed > 0 ? Math.ceil(row.quantity / yieldPerSeed) : 0;
+      const batchCapacity = fieldCount * SEEDS_PER_FIELD;
+      const batchesNeeded = batchCapacity > 0 ? Math.ceil(seedsNeeded / batchCapacity) : 0;
+      const expectedYield = round(seedsNeeded * yieldPerSeed);
+      const surplus = round(expectedYield - row.quantity);
 
       return {
         name: row.name,
         quantity: row.quantity,
         level: crop?.level ?? null,
+        baseYieldPerSeed,
         yieldPerSeed,
         seedsNeeded,
+        fieldCount,
+        batchCapacity,
+        batchesNeeded,
         hoursPerSeed,
-        totalHours: round(seedsNeeded * hoursPerSeed),
+        elapsedHours: round(batchesNeeded * hoursPerSeed),
+        totalGrowHours: round(seedsNeeded * hoursPerSeed),
+        expectedYield,
+        surplus,
       };
     }),
     unresolvedMaterials: toRows(unresolvedMaterials),
@@ -71,7 +87,7 @@ export function calculateTaskPlan(tasks, manualMaterials, data) {
 }
 
 export function calculateTotalCropHours(cropNeeds) {
-  return round(cropNeeds.reduce((total, crop) => total + crop.totalHours, 0));
+  return round(cropNeeds.reduce((total, crop) => total + crop.elapsedHours, 0));
 }
 
 function expandMaterial(name, quantity, recipeMap, rawMaterials, cropMap, cropNeeds, unresolvedMaterials, stack) {
@@ -158,6 +174,16 @@ function getCropYield(crop) {
 function toPositiveNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+function clampFieldCount(value) {
+  const number = Math.floor(Number(value));
+
+  if (!Number.isFinite(number)) {
+    return 1;
+  }
+
+  return Math.min(Math.max(number, 1), 4);
 }
 
 function addAmount(map, name, quantity) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CalendarDays, Clock3, FlaskConical, Plus, RefreshCw, Trash2, Utensils } from 'lucide-react';
+import { AlertCircle, CalendarDays, Clock3, FlaskConical, Plus, RefreshCw, Sprout, Trash2, Utensils } from 'lucide-react';
 import { loadPlannerData } from './data/loadPlannerData.js';
 import { calculateTaskPlan, calculateTotalCropHours, createRecipeOptions } from './utils/planner.js';
 
@@ -19,6 +19,10 @@ export function App() {
   const [plannerData, setPlannerData] = useState(null);
   const [tasks, setTasks] = useState([createEmptyTask()]);
   const [manualMaterials, setManualMaterials] = useState([createEmptyMaterial()]);
+  const [farmSettings, setFarmSettings] = useState({
+    fieldCount: 1,
+    fertilizerEnabled: false,
+  });
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
 
@@ -52,8 +56,8 @@ export function App() {
       return null;
     }
 
-    return calculateTaskPlan(tasks, manualMaterials, plannerData);
-  }, [plannerData, tasks, manualMaterials]);
+    return calculateTaskPlan(tasks, manualMaterials, plannerData, farmSettings);
+  }, [plannerData, tasks, manualMaterials, farmSettings]);
 
   const totalCropHours = plan ? calculateTotalCropHours(plan.cropNeeds) : 0;
   const selectedTaskCount = tasks.filter((task) => task.recipeId && Number(task.quantity) > 0).length;
@@ -84,6 +88,13 @@ export function App() {
     setManualMaterials((currentMaterials) =>
       currentMaterials.length === 1 ? [createEmptyMaterial()] : currentMaterials.filter((material) => material.id !== materialId),
     );
+  }
+
+  function updateFarmSetting(field, value) {
+    setFarmSettings((currentSettings) => ({
+      ...currentSettings,
+      [field]: value,
+    }));
   }
 
   return (
@@ -119,7 +130,7 @@ export function App() {
             <section className="summary-grid">
               <MetricCard icon={Utensils} label="已選任務" value={`${selectedTaskCount} 項`} />
               <MetricCard icon={FlaskConical} label="可選菜品/酒水" value={`${recipeOptions.length} 項`} />
-              <MetricCard icon={Clock3} label="作物總時間" value={`${totalCropHours} 小時`} />
+              <MetricCard icon={Clock3} label="估計種植耗時" value={`${totalCropHours} 小時`} />
             </section>
 
             <section className="planner-layout">
@@ -217,6 +228,41 @@ export function App() {
 
               <aside className="placeholder-panel">
                 <div className="placeholder-icon">
+                  <Sprout aria-hidden="true" size={22} />
+                </div>
+                <h2>農田設定</h2>
+                <p>先以手動輸入農田數量計算；之後會改成依客棧等級自動帶入。</p>
+                <div className="settings-stack">
+                  <label>
+                    <span>農田數量</span>
+                    <input
+                      max="4"
+                      min="1"
+                      step="1"
+                      type="number"
+                      value={farmSettings.fieldCount}
+                      onChange={(event) => updateFarmSetting('fieldCount', event.target.value)}
+                    />
+                  </label>
+                  <label className="toggle-row">
+                    <input
+                      checked={farmSettings.fertilizerEnabled}
+                      type="checkbox"
+                      onChange={(event) => updateFarmSetting('fertilizerEnabled', event.target.checked)}
+                    />
+                    <span>使用肥料，單次產量 +10%</span>
+                  </label>
+                </div>
+                <div className="reserved-grid">
+                  <span>單田容量</span>
+                  <strong>16 種子</strong>
+                  <span>農田上限</span>
+                  <strong>4 個</strong>
+                </div>
+              </aside>
+
+              <aside className="placeholder-panel">
+                <div className="placeholder-icon">
                   <CalendarDays aria-hidden="true" size={22} />
                 </div>
                 <h2>客棧等級資料預留</h2>
@@ -251,15 +297,18 @@ export function App() {
               />
               <ResultTable
                 title="作物時間"
-                description="依照作物需求數量與單次產量反推種子數；總時數是種子數乘上單次生長時間。"
+                description="依照需求量、單次產量、農田數量與肥料設定反推種子數、輪次、預估產量與種植耗時。"
                 columns={[
                   { key: 'name', label: '作物' },
                   { key: 'quantity', label: '需求數量' },
                   { key: 'level', label: '等級' },
                   { key: 'yieldPerSeed', label: '單次產量' },
                   { key: 'seedsNeeded', label: '種子數' },
+                  { key: 'batchesNeeded', label: '輪次' },
                   { key: 'hoursPerSeed', label: '單次小時' },
-                  { key: 'totalHours', label: '總時數' },
+                  { key: 'elapsedHours', label: '種植耗時' },
+                  { key: 'expectedYield', label: '預估產量' },
+                  { key: 'surplus', label: '多產' },
                 ]}
                 rows={plan.cropNeeds}
               />

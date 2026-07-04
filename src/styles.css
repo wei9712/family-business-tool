@@ -229,6 +229,12 @@ input {
   font: inherit;
 }
 
+input[type='checkbox'] {
+  width: 18px;
+  min-height: 18px;
+  accent-color: #315c47;
+}
+
 select:focus,
 input:focus {
   border-color: #4d7c61;
@@ -269,6 +275,23 @@ input:focus {
 .placeholder-panel p {
   color: #637067;
   line-height: 1.6;
+}
+
+.settings-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.toggle-row {
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-row span {
+  color: #16201c;
+  font-size: 0.95rem;
 }
 
 .reserved-grid {
