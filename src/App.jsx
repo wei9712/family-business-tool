@@ -1,0 +1,332 @@
+import { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, CalendarDays, Clock3, FlaskConical, Plus, RefreshCw, Trash2, Utensils } from 'lucide-react';
+import { loadPlannerData } from './data/loadPlannerData.js';
+import { calculateTaskPlan, calculateTotalCropHours, createRecipeOptions } from './utils/planner.js';
+
+const createEmptyTask = () => ({
+  id: crypto.randomUUID(),
+  recipeId: '',
+  quantity: 1,
+});
+
+const createEmptyMaterial = () => ({
+  id: crypto.randomUUID(),
+  name: '',
+  quantity: 1,
+});
+
+export function App() {
+  const [plannerData, setPlannerData] = useState(null);
+  const [tasks, setTasks] = useState([createEmptyTask()]);
+  const [manualMaterials, setManualMaterials] = useState([createEmptyMaterial()]);
+  const [status, setStatus] = useState('loading');
+  const [error, setError] = useState('');
+
+  async function refreshData() {
+    setStatus('loading');
+    setError('');
+
+    try {
+      setPlannerData(await loadPlannerData());
+      setStatus('ready');
+    } catch (loadError) {
+      setStatus('error');
+      setError(loadError.message);
+    }
+  }
+
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  const recipeOptions = useMemo(() => {
+    if (!plannerData) {
+      return [];
+    }
+
+    return createRecipeOptions(plannerData);
+  }, [plannerData]);
+
+  const plan = useMemo(() => {
+    if (!plannerData) {
+      return null;
+    }
+
+    return calculateTaskPlan(tasks, manualMaterials, plannerData);
+  }, [plannerData, tasks, manualMaterials]);
+
+  const totalCropHours = plan ? calculateTotalCropHours(plan.cropNeeds) : 0;
+  const selectedTaskCount = tasks.filter((task) => task.recipeId && Number(task.quantity) > 0).length;
+
+  function addTask() {
+    setTasks((currentTasks) => [...currentTasks, createEmptyTask()]);
+  }
+
+  function updateTask(taskId, field, value) {
+    setTasks((currentTasks) => currentTasks.map((task) => (task.id === taskId ? { ...task, [field]: value } : task)));
+  }
+
+  function removeTask(taskId) {
+    setTasks((currentTasks) => (currentTasks.length === 1 ? [createEmptyTask()] : currentTasks.filter((task) => task.id !== taskId)));
+  }
+
+  function addManualMaterial() {
+    setManualMaterials((currentMaterials) => [...currentMaterials, createEmptyMaterial()]);
+  }
+
+  function updateManualMaterial(materialId, field, value) {
+    setManualMaterials((currentMaterials) =>
+      currentMaterials.map((material) => (material.id === materialId ? { ...material, [field]: value } : material)),
+    );
+  }
+
+  function removeManualMaterial(materialId) {
+    setManualMaterials((currentMaterials) =>
+      currentMaterials.length === 1 ? [createEmptyMaterial()] : currentMaterials.filter((material) => material.id !== materialId),
+    );
+  }
+
+  return (
+    <main className="app-shell">
+      <section className="workspace">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Weekly Task Planner</p>
+            <h1>家業週任務素材計算</h1>
+          </div>
+          <button className="icon-button" type="button" onClick={refreshData} title="重新載入資料">
+            <RefreshCw aria-hidden="true" size={18} />
+            <span>重新載入</span>
+          </button>
+        </header>
+
+        {status === 'error' && (
+          <div className="notice error" role="alert">
+            <AlertCircle aria-hidden="true" size={20} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {status === 'loading' && (
+          <div className="notice">
+            <RefreshCw aria-hidden="true" size={20} />
+            <span>正在讀取菜品、酒水、瓷器與作物資料...</span>
+          </div>
+        )}
+
+        {status === 'ready' && plannerData && plan && (
+          <>
+            <section className="summary-grid">
+              <MetricCard icon={Utensils} label="已選任務" value={`${selectedTaskCount} 項`} />
+              <MetricCard icon={FlaskConical} label="可選菜品/酒水" value={`${recipeOptions.length} 項`} />
+              <MetricCard icon={Clock3} label="作物總時間" value={`${totalCropHours} 小時`} />
+            </section>
+
+            <section className="planner-layout">
+              <div className="tool-panel">
+                <div className="section-title">
+                  <div>
+                    <h2>本週要完成的項目</h2>
+                    <p>先選菜品或酒水，再輸入本週需要完成的數量。</p>
+                  </div>
+                  <button className="icon-button" type="button" onClick={addTask}>
+                    <Plus aria-hidden="true" size={18} />
+                    <span>新增</span>
+                  </button>
+                </div>
+
+                <div className="task-list">
+                  {tasks.map((task) => (
+                    <div className="task-row" key={task.id}>
+                      <label>
+                        <span>項目</span>
+                        <select value={task.recipeId} onChange={(event) => updateTask(task.id, 'recipeId', event.target.value)}>
+                          <option value="">選擇菜品或酒水</option>
+                          {recipeOptions.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              Lv.{option.level} {option.type}｜{option.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="quantity-field">
+                        <span>數量</span>
+                        <input
+                          min="1"
+                          step="1"
+                          type="number"
+                          value={task.quantity}
+                          onChange={(event) => updateTask(task.id, 'quantity', event.target.value)}
+                        />
+                      </label>
+                      <button className="square-button" type="button" onClick={() => removeTask(task.id)} title="移除項目">
+                        <Trash2 aria-hidden="true" size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="tool-panel">
+                <div className="section-title">
+                  <div>
+                    <h2>額外素材</h2>
+                    <p>任務若直接要求一般素材，可在這裡輸入名稱與數量。</p>
+                  </div>
+                  <button className="icon-button" type="button" onClick={addManualMaterial}>
+                    <Plus aria-hidden="true" size={18} />
+                    <span>新增</span>
+                  </button>
+                </div>
+
+                <div className="task-list">
+                  {manualMaterials.map((material) => (
+                    <div className="task-row manual-row" key={material.id}>
+                      <label>
+                        <span>素材名稱</span>
+                        <input
+                          list="known-materials"
+                          placeholder="例如：玉米、粗礦石"
+                          type="text"
+                          value={material.name}
+                          onChange={(event) => updateManualMaterial(material.id, 'name', event.target.value)}
+                        />
+                      </label>
+                      <label className="quantity-field">
+                        <span>數量</span>
+                        <input
+                          min="1"
+                          step="1"
+                          type="number"
+                          value={material.quantity}
+                          onChange={(event) => updateManualMaterial(material.id, 'quantity', event.target.value)}
+                        />
+                      </label>
+                      <button className="square-button" type="button" onClick={() => removeManualMaterial(material.id)} title="移除素材">
+                        <Trash2 aria-hidden="true" size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <datalist id="known-materials">
+                  {plannerData.cropTimes.map((crop) => (
+                    <option key={crop.作物名稱} value={crop.作物名稱} />
+                  ))}
+                </datalist>
+              </div>
+
+              <aside className="placeholder-panel">
+                <div className="placeholder-icon">
+                  <CalendarDays aria-hidden="true" size={22} />
+                </div>
+                <h2>客棧等級資料預留</h2>
+                <p>這裡之後會接上客棧等級、人數、每日任務倍率，以及維持該等級需要賣出的食材資料。</p>
+                <div className="reserved-grid">
+                  <span>客棧等級</span>
+                  <strong>待接資料</strong>
+                  <span>人數/需求</span>
+                  <strong>待接資料</strong>
+                </div>
+              </aside>
+            </section>
+
+            <section className="result-grid">
+              <ResultTable
+                title="直接材料"
+                description="依照你選的菜品/酒水配方直接相加，包含酒壺、瓷器或其他加工項。"
+                columns={[
+                  { key: 'name', label: '材料' },
+                  { key: 'quantity', label: '數量' },
+                ]}
+                rows={plan.directMaterials}
+              />
+              <ResultTable
+                title="展開後素材"
+                description="會把酒水需要的瓷器繼續拆成粗礦石、原木等材料。"
+                columns={[
+                  { key: 'name', label: '素材' },
+                  { key: 'quantity', label: '數量' },
+                ]}
+                rows={plan.rawMaterials}
+              />
+              <ResultTable
+                title="作物時間"
+                description="只計算目前作物資料中找得到生長時間的素材。總時間是數量乘上單次生長時間。"
+                columns={[
+                  { key: 'name', label: '作物' },
+                  { key: 'quantity', label: '數量' },
+                  { key: 'level', label: '等級' },
+                  { key: 'hoursPerUnit', label: '單次小時' },
+                  { key: 'totalHours', label: '總小時' },
+                ]}
+                rows={plan.cropNeeds}
+              />
+              <ResultTable
+                title="未接時間資料"
+                description="一般素材或尚未提供生長/製作時間的加工材料會先列在這裡。"
+                columns={[
+                  { key: 'name', label: '素材' },
+                  { key: 'quantity', label: '數量' },
+                ]}
+                rows={plan.unresolvedMaterials}
+              />
+            </section>
+          </>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function MetricCard({ icon: Icon, label, value }) {
+  return (
+    <article className="metric-card">
+      <div className="metric-icon">
+        <Icon aria-hidden="true" size={20} />
+      </div>
+      <div>
+        <p>{label}</p>
+        <strong>{value}</strong>
+      </div>
+    </article>
+  );
+}
+
+function ResultTable({ title, description, columns, rows }) {
+  return (
+    <section className="table-section compact-table">
+      <div className="section-title">
+        <div>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key}>{column.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length}>尚無資料</td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <tr key={row.name}>
+                  {columns.map((column) => (
+                    <td key={column.key}>{row[column.key] ?? '-'}</td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}

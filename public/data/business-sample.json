@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "name": "家業範例",
+    "currency": "TWD",
+    "period": "2026-07"
+  },
+  "items": [
+    {
+      "id": "rice-field",
+      "name": "稻田收入",
+      "category": "農務",
+      "revenue": 68000,
+      "cost": 22000,
+      "note": "第一期收成"
+    },
+    {
+      "id": "storage",
+      "name": "倉儲支出",
+      "category": "營運",
+      "revenue": 0,
+      "cost": 8500,
+      "note": "租金與耗材"
+    },
+    {
+      "id": "market",
+      "name": "市集銷售",
+      "category": "銷售",
+      "revenue": 36000,
+      "cost": 6400,
+      "note": "週末攤位"
+    }
+  ]
+}

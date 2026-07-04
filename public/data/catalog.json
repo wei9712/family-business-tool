@@ -1,0 +1,22 @@
+[
+  {
+    "id": "dishes",
+    "名稱": "菜品",
+    "路徑": "./data/dishes.json"
+  },
+  {
+    "id": "ceramics",
+    "名稱": "瓷器",
+    "路徑": "./data/ceramics.json"
+  },
+  {
+    "id": "wine-recipes",
+    "名稱": "酒水製作方法",
+    "路徑": "./data/wine-recipes.json"
+  },
+  {
+    "id": "crop-times",
+    "名稱": "作物的時間",
+    "路徑": "./data/crop-times.json"
+  }
+]
