@@ -52,13 +52,18 @@ export function calculateTaskPlan(tasks, manualMaterials, data) {
     rawMaterials: toRows(rawMaterials),
     cropNeeds: toRows(cropNeeds).map((row) => {
       const crop = cropMap.get(row.name);
-      const hoursPerUnit = crop ? crop.hours : 0;
+      const hoursPerSeed = crop ? crop.hours : 0;
+      const yieldPerSeed = crop ? crop.yieldPerSeed : 0;
+      const seedsNeeded = yieldPerSeed > 0 ? Math.ceil(row.quantity / yieldPerSeed) : 0;
 
       return {
-        ...row,
+        name: row.name,
+        quantity: row.quantity,
         level: crop?.level ?? null,
-        hoursPerUnit,
-        totalHours: round(row.quantity * hoursPerUnit),
+        yieldPerSeed,
+        seedsNeeded,
+        hoursPerSeed,
+        totalHours: round(seedsNeeded * hoursPerSeed),
       };
     }),
     unresolvedMaterials: toRows(unresolvedMaterials),
@@ -109,6 +114,7 @@ function createCropMap(crops) {
       {
         level: crop.等級,
         hours: parseHours(crop.生長時間),
+        yieldPerSeed: getCropYield(crop),
       },
     ]),
   );
@@ -127,6 +133,26 @@ function toRecipeOption(item, type) {
 function parseHours(value) {
   const matched = String(value).match(/[\d.]+/);
   return matched ? Number(matched[0]) : 0;
+}
+
+function getCropYield(crop) {
+  const explicitYield = Number(crop.單次產量);
+
+  if (Number.isFinite(explicitYield) && explicitYield > 0) {
+    return explicitYield;
+  }
+
+  const hours = parseHours(crop.生長時間);
+
+  if (hours === 3.6) {
+    return 12;
+  }
+
+  if (hours === 14.4) {
+    return 24;
+  }
+
+  return 0;
 }
 
 function toPositiveNumber(value) {

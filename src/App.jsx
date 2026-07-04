@@ -251,13 +251,15 @@ export function App() {
               />
               <ResultTable
                 title="作物時間"
-                description="只計算目前作物資料中找得到生長時間的素材。總時間是數量乘上單次生長時間。"
+                description="依照作物需求數量與單次產量反推種子數；總時數是種子數乘上單次生長時間。"
                 columns={[
                   { key: 'name', label: '作物' },
-                  { key: 'quantity', label: '數量' },
+                  { key: 'quantity', label: '需求數量' },
                   { key: 'level', label: '等級' },
-                  { key: 'hoursPerUnit', label: '單次小時' },
-                  { key: 'totalHours', label: '總小時' },
+                  { key: 'yieldPerSeed', label: '單次產量' },
+                  { key: 'seedsNeeded', label: '種子數' },
+                  { key: 'hoursPerSeed', label: '單次小時' },
+                  { key: 'totalHours', label: '總時數' },
                 ]}
                 rows={plan.cropNeeds}
               />
