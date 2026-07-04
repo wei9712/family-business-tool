@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CalendarDays, Clock3, FlaskConical, Plus, RefreshCw, Sprout, Trash2, Utensils } from 'lucide-react';
+import { AlertCircle, CalendarDays, Clock3, FlaskConical, Hammer, Plus, RefreshCw, Sprout, Trash2, Utensils } from 'lucide-react';
 import { loadPlannerData } from './data/loadPlannerData.js';
-import { calculateTaskPlan, calculateTotalCropHours, createRecipeOptions } from './utils/planner.js';
+import { calculateTaskPlan, calculateTotalCropHours, calculateTotalMaterialHours, createRecipeOptions } from './utils/planner.js';
 
 const createEmptyTask = () => ({
   id: crypto.randomUUID(),
@@ -22,6 +22,7 @@ export function App() {
   const [farmSettings, setFarmSettings] = useState({
     fieldCount: 1,
     fertilizerEnabled: false,
+    materialEfficiencyLevel: 1,
   });
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
@@ -60,6 +61,7 @@ export function App() {
   }, [plannerData, tasks, manualMaterials, farmSettings]);
 
   const totalCropHours = plan ? calculateTotalCropHours(plan.cropNeeds) : 0;
+  const totalMaterialHours = plan ? calculateTotalMaterialHours(plan.unresolvedMaterials) : 0;
   const selectedTaskCount = tasks.filter((task) => task.recipeId && Number(task.quantity) > 0).length;
 
   function addTask() {
@@ -131,6 +133,7 @@ export function App() {
               <MetricCard icon={Utensils} label="已選任務" value={`${selectedTaskCount} 項`} />
               <MetricCard icon={FlaskConical} label="可選菜品/酒水" value={`${recipeOptions.length} 項`} />
               <MetricCard icon={Clock3} label="估計種植耗時" value={`${totalCropHours} 小時`} />
+              <MetricCard icon={Hammer} label="非種植素材耗時" value={`${totalMaterialHours} 小時`} />
             </section>
 
             <section className="planner-layout">
@@ -252,12 +255,28 @@ export function App() {
                     />
                     <span>使用肥料，單次產量 +10%</span>
                   </label>
+                  <label>
+                    <span>素材效率等級</span>
+                    <select
+                      value={farmSettings.materialEfficiencyLevel}
+                      onChange={(event) => updateFarmSetting('materialEfficiencyLevel', event.target.value)}
+                    >
+                      <option value="1">1 等｜102%</option>
+                      <option value="2">2 等｜105%</option>
+                      <option value="3">3 等｜107%</option>
+                      <option value="4">4 等｜110%</option>
+                    </select>
+                  </label>
                 </div>
                 <div className="reserved-grid">
                   <span>單田容量</span>
                   <strong>16 種子</strong>
                   <span>農田上限</span>
                   <strong>4 個</strong>
+                  <span>一般素材</span>
+                  <strong>5 / 小時</strong>
+                  <span>木頭素材</span>
+                  <strong>10 / 小時</strong>
                 </div>
               </aside>
 
@@ -313,11 +332,15 @@ export function App() {
                 rows={plan.cropNeeds}
               />
               <ResultTable
-                title="未接時間資料"
-                description="一般素材或尚未提供生長/製作時間的加工材料會先列在這裡。"
+                title="非種植素材產出"
+                description="作物以外的素材先用一般 5/小時、木頭 10/小時計算，再套用素材效率等級。"
                 columns={[
                   { key: 'name', label: '素材' },
                   { key: 'quantity', label: '數量' },
+                  { key: 'efficiencyPercent', label: '效率' },
+                  { key: 'baseHourlyOutput', label: '基礎/小時' },
+                  { key: 'hourlyOutput', label: '實際/小時' },
+                  { key: 'productionHours', label: '耗時' },
                 ]}
                 rows={plan.unresolvedMaterials}
               />

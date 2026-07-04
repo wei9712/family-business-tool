@@ -12,10 +12,18 @@ export function createRecipeOptions(data) {
 }
 
 const SEEDS_PER_FIELD = 16;
+const MATERIAL_EFFICIENCY_BY_LEVEL = {
+  1: 1.02,
+  2: 1.05,
+  3: 1.07,
+  4: 1.1,
+};
 
 export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {}) {
   const fieldCount = clampFieldCount(farmSettings.fieldCount);
   const fertilizerEnabled = Boolean(farmSettings.fertilizerEnabled);
+  const materialEfficiencyLevel = clampMaterialEfficiencyLevel(farmSettings.materialEfficiencyLevel);
+  const materialEfficiency = MATERIAL_EFFICIENCY_BY_LEVEL[materialEfficiencyLevel];
   const recipeMap = createRecipeMap(data);
   const cropMap = createCropMap(data.cropTimes);
   const directMaterials = new Map();
@@ -82,12 +90,28 @@ export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {
         surplus,
       };
     }),
-    unresolvedMaterials: toRows(unresolvedMaterials),
+    unresolvedMaterials: toRows(unresolvedMaterials).map((row) => {
+      const baseHourlyOutput = getBaseMaterialHourlyOutput(row.name);
+      const hourlyOutput = round(baseHourlyOutput * materialEfficiency);
+
+      return {
+        ...row,
+        efficiencyLevel: materialEfficiencyLevel,
+        efficiencyPercent: Math.round(materialEfficiency * 100),
+        baseHourlyOutput,
+        hourlyOutput,
+        productionHours: hourlyOutput > 0 ? round(row.quantity / hourlyOutput) : 0,
+      };
+    }),
   };
 }
 
 export function calculateTotalCropHours(cropNeeds) {
   return round(cropNeeds.reduce((total, crop) => total + crop.elapsedHours, 0));
+}
+
+export function calculateTotalMaterialHours(materials) {
+  return round(materials.reduce((total, material) => total + material.productionHours, 0));
 }
 
 function expandMaterial(name, quantity, recipeMap, rawMaterials, cropMap, cropNeeds, unresolvedMaterials, stack) {
@@ -184,6 +208,20 @@ function clampFieldCount(value) {
   }
 
   return Math.min(Math.max(number, 1), 4);
+}
+
+function clampMaterialEfficiencyLevel(value) {
+  const number = Math.floor(Number(value));
+
+  if (!Number.isFinite(number)) {
+    return 1;
+  }
+
+  return Math.min(Math.max(number, 1), 4);
+}
+
+function getBaseMaterialHourlyOutput(name) {
+  return name.includes('木') ? 10 : 5;
 }
 
 function addAmount(map, name, quantity) {
