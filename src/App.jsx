@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CalendarDays, Clock3, FlaskConical, Hammer, Plus, RefreshCw, Sprout, Trash2, Utensils } from 'lucide-react';
 import { loadPlannerData } from './data/loadPlannerData.js';
-import { calculateTaskPlan, calculateTotalCropHours, calculateTotalMaterialHours, createRecipeOptions } from './utils/planner.js';
+import {
+  calculateTaskPlan,
+  calculateTotalCropHours,
+  calculateTotalMaterialHours,
+  createRecipeOptions,
+  createSalesPlan,
+  getFieldCountForBusinessLevel,
+} from './utils/planner.js';
 
 const createEmptyTask = () => ({
   id: crypto.randomUUID(),
@@ -20,9 +27,12 @@ export function App() {
   const [tasks, setTasks] = useState([createEmptyTask()]);
   const [manualMaterials, setManualMaterials] = useState([createEmptyMaterial()]);
   const [farmSettings, setFarmSettings] = useState({
-    fieldCount: 1,
+    businessLevel: 1,
     fertilizerEnabled: false,
     materialEfficiencyLevel: 1,
+    seatCount: 6,
+    weeklySalesHours: 168,
+    employeeEfficiencyLevel: 1,
   });
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
@@ -52,16 +62,33 @@ export function App() {
     return createRecipeOptions(plannerData);
   }, [plannerData]);
 
-  const plan = useMemo(() => {
+  const salesPlan = useMemo(() => {
     if (!plannerData) {
       return null;
     }
 
-    return calculateTaskPlan(tasks, manualMaterials, plannerData, farmSettings);
+    return createSalesPlan(plannerData, farmSettings);
   }, [plannerData, tasks, manualMaterials, farmSettings]);
+
+  const farmPlanningSettings = useMemo(
+    () => ({
+      ...farmSettings,
+      fieldCount: getFieldCountForBusinessLevel(farmSettings.businessLevel),
+    }),
+    [farmSettings],
+  );
+
+  const plan = useMemo(() => {
+    if (!plannerData || !salesPlan) {
+      return null;
+    }
+
+    return calculateTaskPlan(tasks, manualMaterials, plannerData, farmPlanningSettings, salesPlan.rows);
+  }, [plannerData, tasks, manualMaterials, farmPlanningSettings, salesPlan]);
 
   const totalCropHours = plan ? calculateTotalCropHours(plan.cropNeeds) : 0;
   const totalMaterialHours = plan ? calculateTotalMaterialHours(plan.unresolvedMaterials) : 0;
+  const totalSales = salesPlan ? salesPlan.totalSales : 0;
   const selectedTaskCount = tasks.filter((task) => task.recipeId && Number(task.quantity) > 0).length;
 
   function addTask() {
@@ -131,7 +158,7 @@ export function App() {
           <>
             <section className="summary-grid">
               <MetricCard icon={Utensils} label="已選任務" value={`${selectedTaskCount} 項`} />
-              <MetricCard icon={FlaskConical} label="可選菜品/酒水" value={`${recipeOptions.length} 項`} />
+              <MetricCard icon={FlaskConical} label="估計販售數" value={`${totalSales} 份`} />
               <MetricCard icon={Clock3} label="估計種植耗時" value={`${totalCropHours} 小時`} />
               <MetricCard icon={Hammer} label="非種植素材耗時" value={`${totalMaterialHours} 小時`} />
             </section>
@@ -234,17 +261,37 @@ export function App() {
                   <Sprout aria-hidden="true" size={22} />
                 </div>
                 <h2>農田設定</h2>
-                <p>先以手動輸入農田數量計算；之後會改成依客棧等級自動帶入。</p>
+                <p>農田數量依家業等級自動帶入；販售估算先用簡化席位與員工效率。</p>
                 <div className="settings-stack">
                   <label>
-                    <span>農田數量</span>
+                    <span>家業等級</span>
+                    <select value={farmSettings.businessLevel} onChange={(event) => updateFarmSetting('businessLevel', event.target.value)}>
+                      {Array.from({ length: 10 }, (_, index) => index + 1).map((level) => (
+                        <option key={level} value={level}>
+                          {level} 等｜{getFieldCountForBusinessLevel(level)} 農田
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>販售席位</span>
                     <input
-                      max="4"
+                      max="24"
                       min="1"
                       step="1"
                       type="number"
-                      value={farmSettings.fieldCount}
-                      onChange={(event) => updateFarmSetting('fieldCount', event.target.value)}
+                      value={farmSettings.seatCount}
+                      onChange={(event) => updateFarmSetting('seatCount', event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>每週營業小時</span>
+                    <input
+                      min="1"
+                      step="1"
+                      type="number"
+                      value={farmSettings.weeklySalesHours}
+                      onChange={(event) => updateFarmSetting('weeklySalesHours', event.target.value)}
                     />
                   </label>
                   <label className="toggle-row">
@@ -267,8 +314,22 @@ export function App() {
                       <option value="4">4 等｜110%</option>
                     </select>
                   </label>
+                  <label>
+                    <span>員工效率等級</span>
+                    <select
+                      value={farmSettings.employeeEfficiencyLevel}
+                      onChange={(event) => updateFarmSetting('employeeEfficiencyLevel', event.target.value)}
+                    >
+                      <option value="1">1 等｜102%</option>
+                      <option value="2">2 等｜105%</option>
+                      <option value="3">3 等｜107%（約 1 小時 2 分/份）</option>
+                      <option value="4">4 等｜110%</option>
+                    </select>
+                  </label>
                 </div>
                 <div className="reserved-grid">
+                  <span>目前農田</span>
+                  <strong>{getFieldCountForBusinessLevel(farmSettings.businessLevel)} 個</strong>
                   <span>單田容量</span>
                   <strong>16 種子</strong>
                   <span>農田上限</span>
@@ -296,6 +357,20 @@ export function App() {
             </section>
 
             <section className="result-grid">
+              <ResultTable
+                title="推薦販售方案"
+                description="依家業等級優先推薦同等級品項；席位約以酒水 2/3、菜品 1/3 分配，並選目前估算耗時較低的品項。"
+                columns={[
+                  { key: 'type', label: '類型' },
+                  { key: 'name', label: '品項' },
+                  { key: 'level', label: '等級' },
+                  { key: 'seats', label: '席位' },
+                  { key: 'quantity', label: '估計販售' },
+                  { key: 'saleMinutes', label: '每份分鐘' },
+                  { key: 'totalSalesHours', label: '總販售時數' },
+                ]}
+                rows={salesPlan.rows}
+              />
               <ResultTable
                 title="直接材料"
                 description="依照你選的菜品/酒水配方直接相加，包含酒壺、瓷器或其他加工項。"

@@ -18,8 +18,9 @@ const MATERIAL_EFFICIENCY_BY_LEVEL = {
   3: 1.07,
   4: 1.1,
 };
+const BASE_SALE_MINUTES = 62 * MATERIAL_EFFICIENCY_BY_LEVEL[3];
 
-export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {}) {
+export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {}, salesPlan = []) {
   const fieldCount = clampFieldCount(farmSettings.fieldCount);
   const fertilizerEnabled = Boolean(farmSettings.fertilizerEnabled);
   const materialEfficiencyLevel = clampMaterialEfficiencyLevel(farmSettings.materialEfficiencyLevel);
@@ -34,6 +35,22 @@ export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {
   tasks.forEach((task) => {
     const recipe = recipeMap.get(task.recipeId);
     const quantity = toPositiveNumber(task.quantity);
+
+    if (!recipe || quantity <= 0) {
+      return;
+    }
+
+    recipe.item.材料.forEach((material) => {
+      addAmount(directMaterials, material.名稱, material.數量 * quantity);
+      expandMaterial(material.名稱, material.數量 * quantity, recipeMap, rawMaterials, cropMap, cropNeeds, unresolvedMaterials, [
+        recipe.id,
+      ]);
+    });
+  });
+
+  salesPlan.forEach((sale) => {
+    const recipe = recipeMap.get(sale.recipeId);
+    const quantity = toPositiveNumber(sale.quantity);
 
     if (!recipe || quantity <= 0) {
       return;
@@ -112,6 +129,58 @@ export function calculateTotalCropHours(cropNeeds) {
 
 export function calculateTotalMaterialHours(materials) {
   return round(materials.reduce((total, material) => total + material.productionHours, 0));
+}
+
+export function createSalesPlan(data, settings = {}) {
+  const businessLevel = clampBusinessLevel(settings.businessLevel);
+  const seatCount = clampSeatCount(settings.seatCount);
+  const weeklySalesHours = toPositiveNumber(settings.weeklySalesHours) || 168;
+  const employeeEfficiencyLevel = clampMaterialEfficiencyLevel(settings.employeeEfficiencyLevel);
+  const employeeEfficiency = MATERIAL_EFFICIENCY_BY_LEVEL[employeeEfficiencyLevel];
+  const saleMinutes = round(BASE_SALE_MINUTES / employeeEfficiency);
+  const totalSales = Math.floor((weeklySalesHours * 60 * seatCount) / saleMinutes);
+  const wineSeats = Math.min(seatCount, Math.max(1, Math.ceil((seatCount * 2) / 3)));
+  const dishSeats = Math.max(0, seatCount - wineSeats);
+  const wineQuantity = Math.floor((totalSales * wineSeats) / seatCount);
+  const dishQuantity = Math.max(0, totalSales - wineQuantity);
+  const scoringSettings = {
+    fieldCount: getFieldCountForBusinessLevel(businessLevel),
+    fertilizerEnabled: Boolean(settings.fertilizerEnabled),
+    materialEfficiencyLevel: settings.materialEfficiencyLevel,
+  };
+
+  return {
+    businessLevel,
+    fieldCount: getFieldCountForBusinessLevel(businessLevel),
+    seatCount,
+    weeklySalesHours,
+    employeeEfficiencyLevel,
+    employeeEfficiencyPercent: Math.round(employeeEfficiency * 100),
+    saleMinutes,
+    totalSales,
+    rows: [
+      createSalesRow('酒水', data.wines, wineSeats, wineQuantity, businessLevel, saleMinutes, data, scoringSettings),
+      createSalesRow('菜品', data.dishes, dishSeats, dishQuantity, businessLevel, saleMinutes, data, scoringSettings),
+    ].filter((row) => row && row.quantity > 0),
+  };
+}
+
+export function getFieldCountForBusinessLevel(level) {
+  const businessLevel = clampBusinessLevel(level);
+
+  if (businessLevel >= 7) {
+    return 4;
+  }
+
+  if (businessLevel >= 5) {
+    return 3;
+  }
+
+  if (businessLevel >= 4) {
+    return 2;
+  }
+
+  return 1;
 }
 
 function expandMaterial(name, quantity, recipeMap, rawMaterials, cropMap, cropNeeds, unresolvedMaterials, stack) {
@@ -200,6 +269,26 @@ function toPositiveNumber(value) {
   return Number.isFinite(number) && number > 0 ? number : 0;
 }
 
+function clampBusinessLevel(value) {
+  const number = Math.floor(Number(value));
+
+  if (!Number.isFinite(number)) {
+    return 1;
+  }
+
+  return Math.min(Math.max(number, 1), 10);
+}
+
+function clampSeatCount(value) {
+  const number = Math.floor(Number(value));
+
+  if (!Number.isFinite(number)) {
+    return 1;
+  }
+
+  return Math.min(Math.max(number, 1), 24);
+}
+
 function clampFieldCount(value) {
   const number = Math.floor(Number(value));
 
@@ -222,6 +311,47 @@ function clampMaterialEfficiencyLevel(value) {
 
 function getBaseMaterialHourlyOutput(name) {
   return name.includes('木') ? 10 : 5;
+}
+
+function createSalesRow(type, items, seats, quantity, businessLevel, saleMinutes, data, scoringSettings) {
+  if (seats <= 0 || quantity <= 0) {
+    return null;
+  }
+
+  const item = chooseRecommendedItem(type, items, businessLevel, data, scoringSettings);
+
+  if (!item) {
+    return null;
+  }
+
+  return {
+    recipeId: `${type}:${item.品項名稱}`,
+    type,
+    name: item.品項名稱,
+    level: item.等級,
+    seats,
+    quantity,
+    saleMinutes,
+    totalSalesHours: round((quantity * saleMinutes) / 60),
+  };
+}
+
+function chooseRecommendedItem(type, items, businessLevel, data, scoringSettings) {
+  const exactLevelItems = items.filter((item) => item.等級 === businessLevel);
+  const fallbackItems = items.filter((item) => item.等級 <= businessLevel);
+  const candidates = exactLevelItems.length > 0 ? exactLevelItems : fallbackItems;
+
+  return candidates
+    .map((item) => ({
+      item,
+      score: estimateRecipeHours(`${type}:${item.品項名稱}`, data, scoringSettings),
+    }))
+    .sort((a, b) => a.score - b.score || b.item.等級 - a.item.等級 || a.item.品項名稱.localeCompare(b.item.品項名稱, 'zh-Hant'))[0]?.item;
+}
+
+function estimateRecipeHours(recipeId, data, scoringSettings) {
+  const plan = calculateTaskPlan([{ id: 'estimate', recipeId, quantity: 1 }], [], data, scoringSettings, []);
+  return calculateTotalCropHours(plan.cropNeeds) + calculateTotalMaterialHours(plan.unresolvedMaterials);
 }
 
 function addAmount(map, name, quantity) {
