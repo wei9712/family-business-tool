@@ -1,44 +1,78 @@
-# 家業系統小工具
+# 家業任務規劃
 
-這是一個以 React.js 建立的靜態網站專案，適合部署到 GitHub Pages。資料來源先以 JSON 檔管理，前端會讀取資料並做收益、成本與結餘等計算。
+家業任務規劃是一個以 React 與 Vite 建立的靜態網站工具，用來協助玩家規劃家業任務、每週販售品項、素材需求、採集配置與種植時間。
 
-目前專案採用 Vite + React.js 架構，適合後續加入更多元件、計算模組與 JSON 資料來源。
+本工具為非官方遊戲輔助工具，僅供個人規劃與試算使用。
+
+## 功能
+
+- 每日任務輸入：選擇菜品或酒水，計算所需材料。
+- 每週販售規劃：自訂本週推薦販售的酒水與菜品。
+- 額外素材補充：依分類選擇作物、瓷器或一般素材。
+- 營運建議：估算是否能同時維持販售並完成任務。
+- 採集配置：依漁獲、獵獲、石料、林業分類估算採集工時。
+- 素材分析：顯示原始素材、直接需求素材與非種植素材。
+- 種植分析：依農田數量、肥料、澆水與作物時間估算種子數、批次與等待時間。
+- GitHub Pages 部署：可直接透過 GitHub Actions 部署為靜態網站。
 
 ## 專案結構
 
 ```text
 public/
   data/
-    catalog.json           資料集索引
-    dishes.json            菜品資料
-    ceramics.json          瓷器資料
-    wine-recipes.json      酒水製作方法
-    crop-times.json        作物生長時間
-    business-sample.json   舊版範例資料
+    catalog.json
+    dishes.json
+    ceramics.json
+    wine-recipes.json
+    crop-times.json
 src/
-  main.jsx                 React 入口
-  App.jsx                  主畫面與資料流程
-  components/              React 畫面元件
-  data/                    JSON 載入與驗證
-  utils/                   計算與格式化函式
-  styles.css               介面樣式
+  components/
+  data/
+  utils/
+  App.jsx
+  main.jsx
+  styles.css
 ```
 
-## 開發指令
+## 資料來源
+
+目前資料放在 `public/data/`：
+
+- `dishes.json`：菜品資料
+- `ceramics.json`：瓷器資料
+- `wine-recipes.json`：酒水製作資料
+- `crop-times.json`：作物時間與產量資料
+- `catalog.json`：資料目錄
+
+資料皆以 JSON 管理，更新資料後重新整理頁面即可載入最新內容。
+
+## 開發
 
 ```bash
 pnpm install
 pnpm dev
+```
+
+## 建置
+
+```bash
 pnpm build
 ```
 
-`vite.config.js` 已設定 `base: './'`，打包後的 `dist/` 可以直接用在 GitHub Pages。
+建置結果會輸出到 `dist/`。
 
 ## GitHub Pages
 
-1. 在 GitHub 建立一個 repository。
-2. 把此專案 push 上去。
-3. 到 repository 的 `Settings > Pages`。
-4. 若使用 GitHub Actions，選擇 Actions 部署；此專案已附 `.github/workflows/deploy.yml`。
+本專案已包含 GitHub Actions 部署流程：
 
-資料已拆放在 `public/data/*.json`。之後可從 `public/data/catalog.json` 讀取資料集清單，再依需求載入菜品、瓷器、酒水製作方法或作物時間。
+```text
+.github/workflows/deploy.yml
+```
+
+推送到 `main` 分支後，GitHub Actions 會自動建置並部署到 GitHub Pages。
+
+## 授權
+
+本專案程式碼採用 MIT License。
+
+遊戲相關名稱與資料歸原權利人所有，本工具僅做資料整理與計算輔助。

@@ -213,7 +213,7 @@ export function App() {
         <header className="app-header">
           <div>
             <p className="eyebrow">Weekly Planning Workspace</p>
-            <h1>家業週任務規劃工具</h1>
+            <h1>家業任務規劃</h1>
             <p>
               建立本週任務、設定營運條件，系統將自動推算最佳販售方案、素材需求、採集配置與種植規劃，協助快速完成每週家業安排。
             </p>
@@ -315,7 +315,7 @@ export function App() {
 
         <footer className="app-footer">
           <div>
-            <strong>家業週任務規劃工具</strong>
+            <strong>家業任務規劃</strong>
             <span>非官方遊戲輔助工具，僅供個人規劃與試算使用。</span>
           </div>
           <div>
