@@ -10,10 +10,6 @@ export function TaskEditor({ recipeOptions, tasks, onAdd, onRemove, onUpdate }) 
           <h2>每日任務</h2>
           <p>選擇本週需要完成的菜品或酒水，系統將自動推算加工需求、販售數量與後續原始素材。</p>
         </div>
-        <button className="button button--secondary" type="button" onClick={onAdd}>
-          <Plus aria-hidden="true" size={17} />
-          新增任務
-        </button>
       </div>
 
       <div className="entry-list">
@@ -34,6 +30,12 @@ export function TaskEditor({ recipeOptions, tasks, onAdd, onRemove, onUpdate }) 
             </button>
           </div>
         ))}
+      </div>
+      <div className="panel-actions">
+        <button className="button button--secondary" type="button" onClick={onAdd}>
+          <Plus aria-hidden="true" size={17} />
+          新增任務
+        </button>
       </div>
     </section>
   );

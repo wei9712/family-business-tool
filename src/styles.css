@@ -501,7 +501,17 @@ input[type='checkbox'] {
 }
 
 .entry-row--manual {
-  grid-template-columns: 34px 130px 180px minmax(0, 1fr) 110px 44px;
+  grid-template-columns: 34px minmax(96px, 0.62fr) minmax(150px, 1fr) 92px 44px;
+}
+
+.entry-row > * {
+  min-width: 0;
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
 }
 
 .entry-index {

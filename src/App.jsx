@@ -27,7 +27,6 @@ const createEmptyTask = () => ({
 const createEmptyMaterial = () => ({
   id: crypto.randomUUID(),
   category: '全部',
-  search: '',
   name: '',
   quantity: 1,
 });
