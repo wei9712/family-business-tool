@@ -6,9 +6,9 @@ export function TaskEditor({ recipeOptions, tasks, onAdd, onRemove, onUpdate }) 
     <section className="workspace-panel task-panel">
       <div className="panel-header">
         <div>
-          <span className="panel-kicker">Task input</span>
+          <span className="panel-kicker">Daily Tasks</span>
           <h2>每日任務</h2>
-          <p>選擇這週需要完成的菜品或酒水，系統會自動展開加工品與原始素材。</p>
+          <p>選擇本週需要完成的菜品或酒水，系統將自動推算加工需求、販售數量與後續原始素材。</p>
         </div>
         <button className="button button--secondary" type="button" onClick={onAdd}>
           <Plus aria-hidden="true" size={17} />

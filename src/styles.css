@@ -243,6 +243,16 @@ h1 {
   font-size: 1.45rem;
 }
 
+.section-heading small {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .settings-workspace {
   display: grid;
   grid-template-columns: 310px minmax(0, 1fr);

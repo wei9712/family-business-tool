@@ -6,9 +6,9 @@ export function ManualMaterialsEditor({ materialOptions, materials, onAdd, onRem
     <section className="workspace-panel material-panel">
       <div className="panel-header">
         <div>
-          <span className="panel-kicker">Material input</span>
+          <span className="panel-kicker">Additional Materials</span>
           <h2>額外素材</h2>
-          <p>若週任務直接要求一般素材或作物，可以在這裡補上，並沿用同一套輸入元件。</p>
+          <p>若任務直接需要一般素材或作物，可在此補充。系統會與每日任務合併計算，避免重複統計。</p>
         </div>
         <button className="button button--secondary" type="button" onClick={onAdd}>
           <Plus aria-hidden="true" size={17} />

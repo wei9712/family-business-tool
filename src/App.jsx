@@ -162,8 +162,10 @@ export function App() {
         <header className="app-header">
           <div>
             <p className="eyebrow">Weekly Planning Workspace</p>
-            <h1>家業週任務素材規劃工具</h1>
-            <p>先設定營運條件，再輸入任務，最後查看本週販售、採集、素材與種植分析。</p>
+            <h1>家業週任務規劃工具</h1>
+            <p>
+              建立本週任務、設定營運條件，系統將自動推算最佳販售方案、素材需求、採集配置與種植規劃，協助快速完成每週家業安排。
+            </p>
           </div>
           <button className="button button--primary" type="button" onClick={refreshData}>
             <RefreshCw aria-hidden="true" size={18} />
@@ -190,8 +192,9 @@ export function App() {
             <section className="workflow-section workflow-section--settings">
               <SectionHeader
                 step="01"
-                title="設定條件"
-                description="這些條件會影響販售速度、農田容量、肥料產量與採集人手，先校準再開始輸入。"
+                eyebrow="Configuration"
+                title="規劃設定"
+                description="設定本週營運條件，包含家業等級、販售席位、採集效率與種植相關參數。所有分析結果都會依據這些設定即時重新計算。"
               />
               <PlanningSettings gatheringPlan={gatheringPlan} settings={settings} onChange={updateSetting} />
             </section>
@@ -199,8 +202,9 @@ export function App() {
             <section className="workflow-section workflow-section--input">
               <SectionHeader
                 step="02"
-                title="輸入任務"
-                description="任務品項與額外素材使用同一套輸入元件，降低操作成本，也方便後續擴充搜尋式選單。"
+                eyebrow="Planning"
+                title="任務規劃"
+                description="新增本週需要完成的每日任務與額外素材需求。系統會自動展開加工流程、合併素材需求，並建立完整的生產規劃。"
               />
               <div className="input-grid">
                 <TaskEditor
@@ -223,8 +227,9 @@ export function App() {
             <section className="workflow-section workflow-section--analysis">
               <SectionHeader
                 step="03"
-                title="查看分析結果"
-                description="先看關鍵數字與洞察，再用頁籤查看完整明細，避免一次閱讀所有表格。"
+                eyebrow="Insights"
+                title="分析結果"
+                description="依照目前設定自動產生完整規劃。先查看摘要，再切換各分析頁籤檢視詳細資料，降低閱讀負擔並快速掌握重點。"
               />
               <section className="summary-grid" aria-label="規劃摘要">
                 <MetricCard icon={Utensils} label="已選任務" meta="任務池" value={`${selectedTaskCount} 項`} tone="leaf" />
@@ -247,11 +252,12 @@ export function App() {
   );
 }
 
-function SectionHeader({ description, step, title }) {
+function SectionHeader({ description, eyebrow, step, title }) {
   return (
     <div className="section-heading">
       <span>{step}</span>
       <div>
+        <small>{eyebrow}</small>
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
