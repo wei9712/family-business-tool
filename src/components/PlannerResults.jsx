@@ -14,6 +14,7 @@ const SALES_COLUMNS = [
 ];
 
 const GATHERING_COLUMNS = [
+  { key: 'industry', label: '產業', type: 'tag' },
   { key: 'name', label: '素材' },
   { key: 'quantity', label: '需求數量' },
   { key: 'productionHours', label: '人工時數' },
@@ -140,17 +141,18 @@ function SalesAnalysis({ salesPlan }) {
 
 function GatheringAnalysis({ gatheringPlan }) {
   const topMaterial = [...gatheringPlan.rows].sort((a, b) => b.productionHours - a.productionHours)[0];
+  const activeIndustries = gatheringPlan.industryPlans.filter((plan) => plan.totalWorkerHours > 0);
 
   return (
     <>
       <div className="insight-grid">
-        <InsightCard label="建議採集人手" value={`${gatheringPlan.recommendedGatherers} 位`} note={`最多可派 ${gatheringPlan.maxGatherers} 位`} tone="primary" />
-        <InsightCard label="採集等待" value={`${gatheringPlan.elapsedHours} 小時`} note={`${gatheringPlan.totalWorkerHours} 人工作業時數`} />
-        <InsightCard label="主要壓力素材" value={topMaterial?.name ?? '尚無'} note={topMaterial ? `${topMaterial.workSharePercent}% 工作占比` : '沒有非種植素材'} />
+        <InsightCard label="建議採集人手" value={`${gatheringPlan.recommendedGatherers} 位`} note={`依 ${activeIndustries.length} 個產業分配，每產業最多 3 位`} tone="primary" />
+        <InsightCard label="採集等待" value={`${gatheringPlan.elapsedHours} 小時`} note={`${gatheringPlan.totalWorkerHours} 人工作業時數，可跨產業並行`} />
+        <InsightCard label="主要壓力素材" value={topMaterial?.name ?? '尚無'} note={topMaterial ? `${topMaterial.industry}，${topMaterial.workSharePercent}% 產業占比` : '沒有非種植素材'} />
       </div>
       <ResultTable
         title="採集配置"
-        description="依據素材需求，自動估算採集工作量、建議人力配置與實際等待時間。"
+        description="依據素材所屬產業分別估算採集工作量，每個產業目前最多可配置 3 位莊客並行採集。"
         columns={GATHERING_COLUMNS}
         rows={gatheringPlan.rows}
       />

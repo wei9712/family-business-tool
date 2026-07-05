@@ -13,6 +13,10 @@ const MATERIAL_EFFICIENCY_BY_LEVEL = {
 };
 const BASE_SALE_MINUTES = 62 * MATERIAL_EFFICIENCY_BY_LEVEL[3];
 const MAX_GATHERERS = 3;
+const GATHERING_INDUSTRIES = ['漁獲', '獵獲', '石料', '林業'];
+const FISHING_KEYWORDS = ['魚', '鱠', '蝦', '蟹', '貝', '蚌', '豚', '鰻', '鯉', '鯽', '鱸', '鱖', '鯿', '鰱', '鰍', '鱧', '鯚'];
+const HUNTING_KEYWORDS = ['肉', '雞', '鴨', '鵝', '羊', '牛', '豬', '鹿', '兔', '禽', '蛋'];
+const STONE_KEYWORDS = ['石', '礦', '玉', '銅', '鐵', '金', '銀', '錫', '鉛', '煤'];
 const GUEST_CAP_BY_BUSINESS_LEVEL = {
   1: 10,
   2: 10,
@@ -147,10 +151,12 @@ export function calculateTotalMaterialHours(materials) {
 export function createGatheringPlan(materials, settings = {}) {
   const businessLevel = clampBusinessLevel(settings.businessLevel);
   const guestCap = getGuestCapForBusinessLevel(businessLevel);
-  const maxGatherers = Math.min(MAX_GATHERERS, guestCap);
   const totalWorkerHours = calculateTotalMaterialHours(materials);
-  const recommendedGatherers = recommendGatherers(totalWorkerHours, maxGatherers);
-  const elapsedHours = recommendedGatherers > 0 ? round(totalWorkerHours / recommendedGatherers) : 0;
+  const industryPlans = createIndustryGatheringPlans(materials, guestCap);
+  const activeIndustryPlans = industryPlans.filter((plan) => plan.totalWorkerHours > 0);
+  const recommendedGatherers = activeIndustryPlans.reduce((total, plan) => total + plan.recommendedGatherers, 0);
+  const maxGatherers = industryPlans.reduce((total, plan) => total + plan.maxGatherers, 0);
+  const elapsedHours = activeIndustryPlans.reduce((max, plan) => Math.max(max, plan.elapsedHours), 0);
 
   return {
     businessLevel,
@@ -158,13 +164,17 @@ export function createGatheringPlan(materials, settings = {}) {
     maxGatherers,
     recommendedGatherers,
     totalWorkerHours,
-    elapsedHours,
+    elapsedHours: round(elapsedHours),
+    industryPlans,
     rows: materials.map((material) => {
-      const share = totalWorkerHours > 0 ? material.productionHours / totalWorkerHours : 0;
-      const estimatedElapsedHours = recommendedGatherers > 0 ? round(material.productionHours / recommendedGatherers) : 0;
+      const industry = getMaterialIndustry(material.name);
+      const industryPlan = industryPlans.find((plan) => plan.industry === industry);
+      const share = industryPlan?.totalWorkerHours > 0 ? material.productionHours / industryPlan.totalWorkerHours : 0;
+      const estimatedElapsedHours = industryPlan?.recommendedGatherers > 0 ? round(material.productionHours / industryPlan.recommendedGatherers) : 0;
 
       return {
         ...material,
+        industry,
         workSharePercent: Math.round(share * 100),
         assignedWorkHours: round(material.productionHours),
         estimatedElapsedHours,
@@ -359,6 +369,45 @@ function clampMaterialEfficiencyLevel(value) {
 
 function getBaseMaterialHourlyOutput(name) {
   return name.includes('木') ? 10 : 5;
+}
+
+function createIndustryGatheringPlans(materials, guestCap) {
+  const maxGatherersPerIndustry = Math.min(MAX_GATHERERS, guestCap);
+
+  return GATHERING_INDUSTRIES.map((industry) => {
+    const industryMaterials = materials.filter((material) => getMaterialIndustry(material.name) === industry);
+    const totalWorkerHours = calculateTotalMaterialHours(industryMaterials);
+    const recommendedGatherers = recommendGatherers(totalWorkerHours, maxGatherersPerIndustry);
+    const elapsedHours = recommendedGatherers > 0 ? round(totalWorkerHours / recommendedGatherers) : 0;
+
+    return {
+      industry,
+      maxGatherers: maxGatherersPerIndustry,
+      recommendedGatherers,
+      totalWorkerHours,
+      elapsedHours,
+    };
+  });
+}
+
+function getMaterialIndustry(name) {
+  if (hasKeyword(name, FISHING_KEYWORDS)) {
+    return '漁獲';
+  }
+
+  if (hasKeyword(name, HUNTING_KEYWORDS)) {
+    return '獵獲';
+  }
+
+  if (hasKeyword(name, STONE_KEYWORDS)) {
+    return '石料';
+  }
+
+  return '林業';
+}
+
+function hasKeyword(value, keywords) {
+  return keywords.some((keyword) => value.includes(keyword));
 }
 
 function createSelectedSalesRow(recipe, seats, quantity, saleMinutes) {
