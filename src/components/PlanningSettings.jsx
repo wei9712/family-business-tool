@@ -1,4 +1,4 @@
-import { Settings2, Sprout, UsersRound } from 'lucide-react';
+import { Gauge, Settings2, Sprout, UsersRound } from 'lucide-react';
 import { getFieldCountForBusinessLevel, getGuestCapForBusinessLevel } from '../utils/planner.js';
 
 export function PlanningSettings({ gatheringPlan, settings, onChange }) {
@@ -14,69 +14,85 @@ export function PlanningSettings({ gatheringPlan, settings, onChange }) {
         </div>
       </div>
 
+      <div className="settings-focus">
+        <span>家業等級</span>
+        <strong>{settings.businessLevel}</strong>
+        <small>{getFieldCountForBusinessLevel(settings.businessLevel)} 塊農田，莊客上限 {getGuestCapForBusinessLevel(settings.businessLevel)} 位</small>
+      </div>
+
       <div className="settings-grid">
-        <label>
-          <span>家業等級</span>
-          <select value={settings.businessLevel} onChange={(event) => onChange('businessLevel', event.target.value)}>
-            {Array.from({ length: 10 }, (_, index) => index + 1).map((level) => (
-              <option key={level} value={level}>
-                {level} 等，{getFieldCountForBusinessLevel(level)} 塊農田
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="settings-group">
+          <div className="settings-group__title">
+            <Gauge aria-hidden="true" size={16} />
+            <span>營運基準</span>
+          </div>
+          <label>
+            <span>家業等級</span>
+            <select value={settings.businessLevel} onChange={(event) => onChange('businessLevel', event.target.value)}>
+              {Array.from({ length: 10 }, (_, index) => index + 1).map((level) => (
+                <option key={level} value={level}>
+                  {level} 等，{getFieldCountForBusinessLevel(level)} 塊農田
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>販售席位</span>
+            <input
+              max="24"
+              min="1"
+              step="1"
+              type="number"
+              value={settings.seatCount}
+              onChange={(event) => onChange('seatCount', event.target.value)}
+            />
+          </label>
+          <label>
+            <span>週販售時數</span>
+            <input
+              min="1"
+              step="1"
+              type="number"
+              value={settings.weeklySalesHours}
+              onChange={(event) => onChange('weeklySalesHours', event.target.value)}
+            />
+          </label>
+        </div>
 
-        <label>
-          <span>販售席位</span>
-          <input
-            max="24"
-            min="1"
-            step="1"
-            type="number"
-            value={settings.seatCount}
-            onChange={(event) => onChange('seatCount', event.target.value)}
-          />
-        </label>
+        <div className="settings-group settings-group--muted">
+          <div className="settings-group__title">
+            <UsersRound aria-hidden="true" size={16} />
+            <span>效率假設</span>
+          </div>
+          <label>
+            <span>採集效率</span>
+            <select value={settings.materialEfficiencyLevel} onChange={(event) => onChange('materialEfficiencyLevel', event.target.value)}>
+              <option value="1">1 等，102%</option>
+              <option value="2">2 等，105%</option>
+              <option value="3">3 等，107%</option>
+              <option value="4">4 等，110%</option>
+            </select>
+          </label>
 
-        <label>
-          <span>週販售時數</span>
-          <input
-            min="1"
-            step="1"
-            type="number"
-            value={settings.weeklySalesHours}
-            onChange={(event) => onChange('weeklySalesHours', event.target.value)}
-          />
-        </label>
+          <label>
+            <span>販售員工效率</span>
+            <select value={settings.employeeEfficiencyLevel} onChange={(event) => onChange('employeeEfficiencyLevel', event.target.value)}>
+              <option value="1">1 等，102%</option>
+              <option value="2">2 等，105%</option>
+              <option value="3">3 等，107%</option>
+              <option value="4">4 等，110%</option>
+            </select>
+          </label>
 
-        <label>
-          <span>採集效率</span>
-          <select value={settings.materialEfficiencyLevel} onChange={(event) => onChange('materialEfficiencyLevel', event.target.value)}>
-            <option value="1">1 等，102%</option>
-            <option value="2">2 等，105%</option>
-            <option value="3">3 等，107%</option>
-            <option value="4">4 等，110%</option>
-          </select>
-        </label>
-
-        <label>
-          <span>販售員工效率</span>
-          <select value={settings.employeeEfficiencyLevel} onChange={(event) => onChange('employeeEfficiencyLevel', event.target.value)}>
-            <option value="1">1 等，102%</option>
-            <option value="2">2 等，105%</option>
-            <option value="3">3 等，107%</option>
-            <option value="4">4 等，110%</option>
-          </select>
-        </label>
-
-        <label className="toggle-row">
-          <input
-            checked={settings.fertilizerEnabled}
-            type="checkbox"
-            onChange={(event) => onChange('fertilizerEnabled', event.target.checked)}
-          />
-          <span>使用肥料，單顆種子產量向上取整後 +10%</span>
-        </label>
+          <label className="toggle-row">
+            <input
+              checked={settings.fertilizerEnabled}
+              type="checkbox"
+              onChange={(event) => onChange('fertilizerEnabled', event.target.checked)}
+            />
+            <span>使用肥料，單顆種子產量向上取整後 +10%</span>
+          </label>
+        </div>
       </div>
 
       <div className="fact-strip">

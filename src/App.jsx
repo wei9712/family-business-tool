@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Clock3, FlaskConical, Hammer, RefreshCw, Utensils } from 'lucide-react';
+import { AlertCircle, Clock3, FlaskConical, Hammer, RefreshCw, Sparkles, Utensils } from 'lucide-react';
 import { ManualMaterialsEditor } from './components/ManualMaterialsEditor.jsx';
 import { MetricCard } from './components/MetricCard.jsx';
 import { PlannerResults } from './components/PlannerResults.jsx';
@@ -84,6 +84,7 @@ export function App() {
   const totalMaterialHours = plan ? calculateTotalMaterialHours(plan.unresolvedMaterials) : 0;
   const gatheringPlan = plan ? createGatheringPlan(plan.unresolvedMaterials, settings) : null;
   const selectedTaskCount = tasks.filter((task) => task.recipeId && Number(task.quantity) > 0).length;
+  const fieldCount = getFieldCountForBusinessLevel(settings.businessLevel);
 
   function addTask() {
     setTasks((currentTasks) => [...currentTasks, createEmptyTask()]);
@@ -125,16 +126,22 @@ export function App() {
       <section className="workspace">
         <header className="hero-panel">
           <div className="hero-copy">
-            <p className="eyebrow">Weekly Task Planner</p>
+            <p className="eyebrow">Weekly Planning Console</p>
             <h1>家業週任務素材計算工具</h1>
             <p>
               輸入這週的菜品、酒水與額外素材，快速估算作物種植、採集人力、販售席位與總等待時間。
             </p>
           </div>
-          <button className="button button--primary" type="button" onClick={refreshData}>
-            <RefreshCw aria-hidden="true" size={18} />
-            重新載入資料
-          </button>
+          <div className="hero-actions">
+            <div className="hero-status">
+              <Sparkles aria-hidden="true" size={18} />
+              <span>目前以家業 {settings.businessLevel} 等估算</span>
+            </div>
+            <button className="button button--primary" type="button" onClick={refreshData}>
+              <RefreshCw aria-hidden="true" size={18} />
+              重新載入資料
+            </button>
+          </div>
         </header>
 
         {status === 'error' && (
@@ -154,10 +161,16 @@ export function App() {
         {status === 'ready' && plannerData && plan && salesPlan && gatheringPlan && (
           <>
             <section className="summary-grid" aria-label="規劃摘要">
-              <MetricCard icon={Utensils} label="已選任務" value={`${selectedTaskCount} 項`} tone="leaf" />
-              <MetricCard icon={FlaskConical} label="建議販售" value={`${salesPlan.totalSales} 份`} tone="amber" />
-              <MetricCard icon={Clock3} label="種植等待" value={`${totalCropHours} 小時`} tone="sky" />
-              <MetricCard icon={Hammer} label="採集等待" value={`${gatheringPlan.elapsedHours} 小時`} tone="rose" />
+              <MetricCard icon={Utensils} label="已選任務" meta="任務池" value={`${selectedTaskCount} 項`} tone="leaf" />
+              <MetricCard icon={FlaskConical} label="建議販售" meta={`${settings.seatCount} 席位`} value={`${salesPlan.totalSales} 份`} tone="amber" />
+              <MetricCard icon={Clock3} label="種植等待" meta={`${fieldCount} 農田`} value={`${totalCropHours} 小時`} tone="sky" />
+              <MetricCard
+                icon={Hammer}
+                label="採集等待"
+                meta={`${gatheringPlan.recommendedGatherers} 人手`}
+                value={`${gatheringPlan.elapsedHours} 小時`}
+                tone="rose"
+              />
             </section>
 
             <section className="planner-grid">

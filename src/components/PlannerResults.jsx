@@ -1,3 +1,4 @@
+import { Boxes, ClipboardList, Route } from 'lucide-react';
 import { ResultTable } from './ResultTable.jsx';
 
 const SALES_COLUMNS = [
@@ -48,43 +49,89 @@ const MATERIAL_COLUMNS = [
 
 export function PlannerResults({ gatheringPlan, plan, salesPlan }) {
   return (
-    <section className="results-layout">
-      <ResultTable
-        title="推薦販售方案"
-        description="依目前家業等級優先推薦同等級品項，席位採酒水偏多、菜品偏少的初估配置。"
-        columns={SALES_COLUMNS}
-        rows={salesPlan.rows}
-      />
-      <ResultTable
-        title="採集人手配置"
-        description="非種植素材最多 3 位莊客協助採集，系統依工作量估算合理人手與等待時間。"
-        columns={GATHERING_COLUMNS}
-        rows={gatheringPlan.rows}
-      />
-      <ResultTable
-        title="直接需求素材"
-        description="每日任務與推薦販售方案合併後，第一層會直接用到的素材或加工品。"
-        columns={SIMPLE_MATERIAL_COLUMNS}
-        rows={plan.directMaterials}
-      />
-      <ResultTable
-        title="展開後原始素材"
-        description="加工品會繼續展開為原始素材，方便檢查總需求。"
-        columns={SIMPLE_MATERIAL_COLUMNS}
-        rows={plan.rawMaterials}
-      />
-      <ResultTable
-        title="種植規劃"
-        description="作物依單顆種子產量、農田數與肥料設定，估算種子數、批次、時間與餘量。"
-        columns={CROP_COLUMNS}
-        rows={plan.cropNeeds}
-      />
-      <ResultTable
-        title="非種植素材"
-        description="無法種植的素材以基礎產出與效率等級換算採集時間，木頭類素材用每小時 10 個。"
-        columns={MATERIAL_COLUMNS}
-        rows={plan.unresolvedMaterials}
-      />
+    <section className="results-board" aria-label="計算結果">
+      <ResultGroup
+        icon={Route}
+        kicker="Operation"
+        title="營運建議"
+        description="先看販售與採集怎麼分配，確認本週主路線是否合理。"
+      >
+        <ResultTable
+          title="推薦販售方案"
+          description="依目前家業等級優先推薦同等級品項，席位採酒水偏多、菜品偏少的初估配置。"
+          columns={SALES_COLUMNS}
+          rows={salesPlan.rows}
+          variant="featured"
+        />
+        <ResultTable
+          title="採集人手配置"
+          description="非種植素材最多 3 位莊客協助採集，系統依工作量估算合理人手與等待時間。"
+          columns={GATHERING_COLUMNS}
+          rows={gatheringPlan.rows}
+        />
+      </ResultGroup>
+
+      <ResultGroup
+        icon={Boxes}
+        kicker="Inventory"
+        title="素材盤點"
+        description="檢查任務與販售合併後會消耗哪些素材，並展開加工品。"
+      >
+        <ResultTable
+          title="直接需求素材"
+          description="每日任務與推薦販售方案合併後，第一層會直接用到的素材或加工品。"
+          columns={SIMPLE_MATERIAL_COLUMNS}
+          rows={plan.directMaterials}
+          variant="compact"
+        />
+        <ResultTable
+          title="展開後原始素材"
+          description="加工品會繼續展開為原始素材，方便檢查總需求。"
+          columns={SIMPLE_MATERIAL_COLUMNS}
+          rows={plan.rawMaterials}
+          variant="compact"
+        />
+      </ResultGroup>
+
+      <ResultGroup
+        icon={ClipboardList}
+        kicker="Production"
+        title="生產排程"
+        description="把作物、種子、批次與非種植素材採集時間分開看，方便安排順序。"
+      >
+        <ResultTable
+          title="種植規劃"
+          description="作物依單顆種子產量、農田數與肥料設定，估算種子數、批次、時間與餘量。"
+          columns={CROP_COLUMNS}
+          rows={plan.cropNeeds}
+          variant="wide"
+        />
+        <ResultTable
+          title="非種植素材"
+          description="無法種植的素材以基礎產出與效率等級換算採集時間，木頭類素材用每小時 10 個。"
+          columns={MATERIAL_COLUMNS}
+          rows={plan.unresolvedMaterials}
+          variant="wide"
+        />
+      </ResultGroup>
+    </section>
+  );
+}
+
+function ResultGroup({ children, description, icon: Icon, kicker, title }) {
+  return (
+    <section className="result-group">
+      <div className="result-group__header">
+        <div className="result-group__icon">
+          <Icon aria-hidden="true" size={18} />
+        </div>
+        <div>
+          <span>{kicker}</span>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+      </div>
+      <div className="result-group__grid">{children}</div>
     </section>
   );
 }

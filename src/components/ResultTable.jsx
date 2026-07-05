@@ -1,11 +1,12 @@
-export function ResultTable({ columns, description, rows, title }) {
+export function ResultTable({ columns, description, rows, title, variant = 'standard' }) {
   return (
-    <section className="result-card">
+    <section className={`result-card result-card--${variant}`}>
       <div className="panel-header panel-header--table">
         <div>
           <h2>{title}</h2>
           <p>{description}</p>
         </div>
+        <span className="table-count">{rows.length} 筆</span>
       </div>
       <div className="table-wrap">
         <table>
