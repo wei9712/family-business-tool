@@ -5,6 +5,7 @@ import { MetricCard } from './components/MetricCard.jsx';
 import { PlannerResults } from './components/PlannerResults.jsx';
 import { PlanningSettings } from './components/PlanningSettings.jsx';
 import { TaskEditor } from './components/TaskEditor.jsx';
+import { WeeklySalesEditor } from './components/WeeklySalesEditor.jsx';
 import { loadPlannerData } from './data/loadPlannerData.js';
 import {
   calculateTaskPlan,
@@ -27,6 +28,11 @@ const createEmptyMaterial = () => ({
   name: '',
   quantity: 1,
 });
+
+const initialWeeklySales = {
+  wineRecipeId: '',
+  dishRecipeId: '',
+};
 
 const initialSettings = {
   businessLevel: 1,
@@ -75,6 +81,7 @@ export function App() {
   const [plannerData, setPlannerData] = useState(null);
   const [tasks, setTasks] = useState([createEmptyTask()]);
   const [manualMaterials, setManualMaterials] = useState([createEmptyMaterial()]);
+  const [weeklySales, setWeeklySales] = useState(initialWeeklySales);
   const [settings, setSettings] = useState(initialSettings);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
@@ -97,8 +104,10 @@ export function App() {
   }, []);
 
   const recipeOptions = useMemo(() => (plannerData ? createRecipeOptions(plannerData) : []), [plannerData]);
+  const wineOptions = useMemo(() => recipeOptions.filter((option) => option.type === '酒水'), [recipeOptions]);
+  const dishOptions = useMemo(() => recipeOptions.filter((option) => option.type === '菜品'), [recipeOptions]);
   const materialOptions = useMemo(() => (plannerData ? createMaterialOptions(plannerData) : []), [plannerData]);
-  const salesPlan = useMemo(() => (plannerData ? createSalesPlan(plannerData, settings) : null), [plannerData, settings]);
+  const salesPlan = useMemo(() => (plannerData ? createSalesPlan(plannerData, settings, weeklySales) : null), [plannerData, settings, weeklySales]);
   const planningSettings = useMemo(
     () => ({
       ...settings,
@@ -114,6 +123,20 @@ export function App() {
 
     return calculateTaskPlan(tasks, manualMaterials, plannerData, planningSettings, salesPlan.rows);
   }, [manualMaterials, plannerData, planningSettings, salesPlan, tasks]);
+  const taskOnlyPlan = useMemo(() => {
+    if (!plannerData) {
+      return null;
+    }
+
+    return calculateTaskPlan(tasks, manualMaterials, plannerData, planningSettings, []);
+  }, [manualMaterials, plannerData, planningSettings, tasks]);
+  const salesOnlyPlan = useMemo(() => {
+    if (!plannerData || !salesPlan) {
+      return null;
+    }
+
+    return calculateTaskPlan([], [], plannerData, planningSettings, salesPlan.rows);
+  }, [plannerData, planningSettings, salesPlan]);
 
   const totalCropHours = plan ? calculateTotalCropHours(plan.cropNeeds) : 0;
   const totalMaterialHours = plan ? calculateTotalMaterialHours(plan.unresolvedMaterials) : 0;
@@ -156,6 +179,13 @@ export function App() {
     }));
   }
 
+  function updateWeeklySales(field, value) {
+    setWeeklySales((currentSales) => ({
+      ...currentSales,
+      [field]: value,
+    }));
+  }
+
   return (
     <main className="app-shell">
       <section className="workspace">
@@ -187,7 +217,7 @@ export function App() {
           </div>
         )}
 
-        {status === 'ready' && plannerData && plan && salesPlan && gatheringPlan && (
+        {status === 'ready' && plannerData && plan && taskOnlyPlan && salesOnlyPlan && salesPlan && gatheringPlan && (
           <div className="workflow">
             <section className="workflow-section workflow-section--settings">
               <SectionHeader
@@ -207,6 +237,13 @@ export function App() {
                 description="新增本週需要完成的每日任務與額外素材需求。系統會自動展開加工流程、合併素材需求，並建立完整的生產規劃。"
               />
               <div className="input-grid">
+                <WeeklySalesEditor
+                  dishOptions={dishOptions}
+                  salesPlan={salesPlan}
+                  value={weeklySales}
+                  wineOptions={wineOptions}
+                  onChange={updateWeeklySales}
+                />
                 <TaskEditor
                   recipeOptions={recipeOptions}
                   tasks={tasks}
@@ -243,7 +280,13 @@ export function App() {
                   tone="rose"
                 />
               </section>
-              <PlannerResults gatheringPlan={gatheringPlan} plan={plan} salesPlan={salesPlan} />
+              <PlannerResults
+                gatheringPlan={gatheringPlan}
+                plan={plan}
+                salesOnlyPlan={salesOnlyPlan}
+                salesPlan={salesPlan}
+                taskOnlyPlan={taskOnlyPlan}
+              />
             </section>
           </div>
         )}

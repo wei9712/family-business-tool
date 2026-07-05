@@ -424,6 +424,31 @@ input[type='checkbox'] {
   gap: 16px;
 }
 
+.sales-panel {
+  grid-column: 1 / -1;
+}
+
+.sales-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sales-capacity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.84rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
 .workspace-panel {
   padding: 18px;
 }
@@ -825,6 +850,7 @@ tbody tr:last-child td {
   .summary-grid,
   .settings-insights,
   .control-grid,
+  .sales-grid,
   .entry-row,
   .entry-row--manual,
   .insight-grid,

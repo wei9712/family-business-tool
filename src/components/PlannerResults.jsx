@@ -48,7 +48,7 @@ const MATERIAL_COLUMNS = [
   { key: 'productionHours', label: '人工作業時數' },
 ];
 
-export function PlannerResults({ gatheringPlan, plan, salesPlan }) {
+export function PlannerResults({ gatheringPlan, plan, salesOnlyPlan, salesPlan, taskOnlyPlan }) {
   const [activeTab, setActiveTab] = useState('sales');
   const tabs = useMemo(
     () => [
@@ -71,17 +71,17 @@ export function PlannerResults({ gatheringPlan, plan, salesPlan }) {
         label: '素材分析',
         icon: Boxes,
         count: plan.rawMaterials.length,
-        content: <MaterialAnalysis plan={plan} />,
+        content: <MaterialAnalysis plan={plan} salesOnlyPlan={salesOnlyPlan} taskOnlyPlan={taskOnlyPlan} />,
       },
       {
         id: 'crops',
         label: '種植分析',
         icon: ClipboardList,
         count: plan.cropNeeds.length,
-        content: <CropAnalysis plan={plan} />,
+        content: <CropAnalysis plan={plan} salesOnlyPlan={salesOnlyPlan} taskOnlyPlan={taskOnlyPlan} />,
       },
     ],
-    [gatheringPlan, plan, salesPlan],
+    [gatheringPlan, plan, salesOnlyPlan, salesPlan, taskOnlyPlan],
   );
   const activeContent = tabs.find((tab) => tab.id === activeTab)?.content ?? tabs[0].content;
 
@@ -122,7 +122,7 @@ function SalesAnalysis({ salesPlan }) {
     <>
       <div className="insight-grid">
         <InsightCard label="本週可販售" value={`${salesPlan.totalSales} 份`} note={`${salesPlan.seatCount} 席位，${salesPlan.weeklySalesHours} 小時`} tone="primary" />
-        <InsightCard label="最佳方案" value={topSale?.name ?? '尚無'} note={topSale ? `${topSale.type}，Lv.${topSale.level}` : '尚無推薦品項'} />
+        <InsightCard label="本週販售品項" value={topSale?.name ?? '尚未設定'} note={topSale ? `${topSale.type}，Lv.${topSale.level}` : '未選擇時不納入素材計算'} />
         <InsightCard label="每份耗時" value={`${salesPlan.saleMinutes} 分鐘`} note={`員工效率 ${salesPlan.employeeEfficiencyPercent}%`} />
       </div>
       <ResultTable
@@ -156,7 +156,7 @@ function GatheringAnalysis({ gatheringPlan }) {
   );
 }
 
-function MaterialAnalysis({ plan }) {
+function MaterialAnalysis({ plan, salesOnlyPlan, taskOnlyPlan }) {
   return (
     <>
       <div className="insight-grid">
@@ -166,17 +166,17 @@ function MaterialAnalysis({ plan }) {
       </div>
       <div className="analysis-split">
         <ResultTable
-          title="直接需求素材"
-          description="整合每日任務與販售規劃後，統計第一層直接需要準備的素材與加工品。"
+          title="任務原始素材"
+          description="每日任務與額外素材展開後需要準備的原始素材，不含每週販售需求。"
           columns={SIMPLE_MATERIAL_COLUMNS}
-          rows={plan.directMaterials}
+          rows={taskOnlyPlan.rawMaterials}
           variant="compact"
         />
         <ResultTable
-          title="原始素材需求"
-          description="將所有加工品繼續展開至最終原始素材，方便一次掌握完整需求。"
+          title="販售原始素材"
+          description="每週自訂販售品項展開後需要準備的原始素材。未選販售品項時不會產生資料。"
           columns={SIMPLE_MATERIAL_COLUMNS}
-          rows={plan.rawMaterials}
+          rows={salesOnlyPlan.rawMaterials}
           variant="compact"
         />
       </div>
@@ -190,7 +190,7 @@ function MaterialAnalysis({ plan }) {
   );
 }
 
-function CropAnalysis({ plan }) {
+function CropAnalysis({ plan, salesOnlyPlan, taskOnlyPlan }) {
   const totalSeeds = plan.cropNeeds.reduce((total, crop) => total + crop.seedsNeeded, 0);
   const maxWait = plan.cropNeeds.reduce((max, crop) => Math.max(max, crop.elapsedHours), 0);
   const topCrop = [...plan.cropNeeds].sort((a, b) => b.quantity - a.quantity)[0];
@@ -202,9 +202,25 @@ function CropAnalysis({ plan }) {
         <InsightCard label="種子總數" value={`${totalSeeds} 顆`} note="依需求量與單顆產量估算" />
         <InsightCard label="最長等待" value={`${maxWait} 小時`} note={topCrop ? `主要作物：${topCrop.name}` : '尚無作物需求'} />
       </div>
+      <div className="analysis-split">
+        <ResultTable
+          title="任務種植規劃"
+          description="每日任務與額外素材造成的作物需求，不含每週販售品項。"
+          columns={CROP_COLUMNS}
+          rows={taskOnlyPlan.cropNeeds}
+          variant="wide"
+        />
+        <ResultTable
+          title="販售種植規劃"
+          description="每週自訂販售品項造成的作物需求。未選販售品項時不會產生資料。"
+          columns={CROP_COLUMNS}
+          rows={salesOnlyPlan.cropNeeds}
+          variant="wide"
+        />
+      </div>
       <ResultTable
-        title="種植規劃"
-        description="依據需求產量、農田數量、單批生長時間與肥料設定，自動估算種子需求、種植批次、等待時間與預估產量。"
+        title="合併種植規劃"
+        description="依據任務與販售的總需求、農田數量、單批生長時間與肥料設定，估算種子需求、批次、等待時間與預估產量。"
         columns={CROP_COLUMNS}
         rows={plan.cropNeeds}
         variant="wide"

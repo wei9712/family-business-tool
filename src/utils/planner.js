@@ -173,23 +173,27 @@ export function createGatheringPlan(materials, settings = {}) {
   };
 }
 
-export function createSalesPlan(data, settings = {}) {
+export function createSalesPlan(data, settings = {}, weeklySales = {}) {
   const businessLevel = clampBusinessLevel(settings.businessLevel);
   const seatCount = clampSeatCount(settings.seatCount);
   const weeklySalesHours = toPositiveNumber(settings.weeklySalesHours) || 168;
   const employeeEfficiencyLevel = clampMaterialEfficiencyLevel(settings.employeeEfficiencyLevel);
   const employeeEfficiency = MATERIAL_EFFICIENCY_BY_LEVEL[employeeEfficiencyLevel];
   const saleMinutes = round(BASE_SALE_MINUTES / employeeEfficiency);
-  const totalSales = Math.floor((weeklySalesHours * 60 * seatCount) / saleMinutes);
-  const wineSeats = Math.min(seatCount, Math.max(1, Math.ceil((seatCount * 2) / 3)));
-  const dishSeats = Math.max(0, seatCount - wineSeats);
-  const wineQuantity = Math.floor((totalSales * wineSeats) / seatCount);
-  const dishQuantity = Math.max(0, totalSales - wineQuantity);
-  const scoringSettings = {
-    fieldCount: getFieldCountForBusinessLevel(businessLevel),
-    fertilizerEnabled: Boolean(settings.fertilizerEnabled),
-    materialEfficiencyLevel: settings.materialEfficiencyLevel,
-  };
+  const salesCapacity = Math.floor((weeklySalesHours * 60 * seatCount) / saleMinutes);
+  const recipeMap = createRecipeMap(data);
+  const selectedWine = recipeMap.get(weeklySales.wineRecipeId);
+  const selectedDish = recipeMap.get(weeklySales.dishRecipeId);
+  const hasWine = selectedWine?.type === RECIPE_TYPES.wines;
+  const hasDish = selectedDish?.type === RECIPE_TYPES.dishes;
+  const wineSeats = hasWine && hasDish ? Math.min(seatCount, Math.max(1, Math.ceil((seatCount * 2) / 3))) : hasWine ? seatCount : 0;
+  const dishSeats = hasWine && hasDish ? Math.max(0, seatCount - wineSeats) : hasDish ? seatCount : 0;
+  const wineQuantity = wineSeats > 0 ? Math.floor((salesCapacity * wineSeats) / seatCount) : 0;
+  const dishQuantity = dishSeats > 0 ? Math.max(0, salesCapacity - wineQuantity) : 0;
+  const rows = [
+    createSelectedSalesRow(selectedWine, wineSeats, wineQuantity, saleMinutes),
+    createSelectedSalesRow(selectedDish, dishSeats, dishQuantity, saleMinutes),
+  ].filter((row) => row && row.quantity > 0);
 
   return {
     businessLevel,
@@ -199,11 +203,9 @@ export function createSalesPlan(data, settings = {}) {
     employeeEfficiencyLevel,
     employeeEfficiencyPercent: Math.round(employeeEfficiency * 100),
     saleMinutes,
-    totalSales,
-    rows: [
-      createSalesRow(RECIPE_TYPES.wines, data.wines, wineSeats, wineQuantity, businessLevel, saleMinutes, data, scoringSettings),
-      createSalesRow(RECIPE_TYPES.dishes, data.dishes, dishSeats, dishQuantity, businessLevel, saleMinutes, data, scoringSettings),
-    ].filter((row) => row && row.quantity > 0),
+    salesCapacity,
+    totalSales: rows.reduce((total, row) => total + row.quantity, 0),
+    rows,
   };
 }
 
@@ -359,22 +361,16 @@ function getBaseMaterialHourlyOutput(name) {
   return name.includes('木') ? 10 : 5;
 }
 
-function createSalesRow(type, items, seats, quantity, businessLevel, saleMinutes, data, scoringSettings) {
-  if (seats <= 0 || quantity <= 0) {
-    return null;
-  }
-
-  const item = chooseRecommendedItem(type, items, businessLevel, data, scoringSettings);
-
-  if (!item) {
+function createSelectedSalesRow(recipe, seats, quantity, saleMinutes) {
+  if (!recipe || seats <= 0 || quantity <= 0) {
     return null;
   }
 
   return {
-    recipeId: `${type}:${item.品項名稱}`,
-    type,
-    name: item.品項名稱,
-    level: item.等級,
+    recipeId: recipe.id,
+    type: recipe.type,
+    name: recipe.name,
+    level: recipe.level,
     seats,
     quantity,
     saleMinutes,
@@ -397,25 +393,6 @@ function recommendGatherers(totalWorkerHours, maxGatherers) {
   }
 
   return maxGatherers;
-}
-
-function chooseRecommendedItem(type, items, businessLevel, data, scoringSettings) {
-  const exactLevelItems = items.filter((item) => item.等級 === businessLevel);
-  const fallbackItems = items.filter((item) => item.等級 <= businessLevel);
-  const candidates = exactLevelItems.length > 0 ? exactLevelItems : fallbackItems;
-
-  return candidates
-    .map((item) => ({
-      item,
-      score: estimateRecipeHours(`${type}:${item.品項名稱}`, data, scoringSettings),
-    }))
-    .sort((a, b) => a.score - b.score || b.item.等級 - a.item.等級 || a.item.品項名稱.localeCompare(b.item.品項名稱, 'zh-Hant'))[0]
-    ?.item;
-}
-
-function estimateRecipeHours(recipeId, data, scoringSettings) {
-  const plan = calculateTaskPlan([{ id: 'estimate', recipeId, quantity: 1 }], [], data, scoringSettings, []);
-  return calculateTotalCropHours(plan.cropNeeds) + calculateTotalMaterialHours(plan.unresolvedMaterials);
 }
 
 function addAmount(map, name, quantity) {
