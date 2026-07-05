@@ -312,6 +312,17 @@ export function App() {
             </section>
           </div>
         )}
+
+        <footer className="app-footer">
+          <div>
+            <strong>家業週任務規劃工具</strong>
+            <span>非官方遊戲輔助工具，僅供個人規劃與試算使用。</span>
+          </div>
+          <div>
+            <span>MIT License</span>
+            <span>© 2026 wei9712</span>
+          </div>
+        </footer>
       </section>
     </main>
   );
