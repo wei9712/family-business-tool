@@ -21,13 +21,13 @@ const GATHERING_COLUMNS = [
 ];
 
 const OPERATIONS_MATERIAL_COLUMNS = [
-  { key: 'industry', label: '產業', type: 'tag', help: '素材所屬的採集產業。同一產業目前最多可同時安排 3 位莊客。' },
-  { key: 'name', label: '採集品項', help: '遊戲內實際要派人採集的素材名稱。' },
-  { key: 'priority', label: '優先序', help: '同一產業內建議先處理的順序，數字越小越優先。' },
+  { key: 'industry', label: '產業', type: 'tag' },
+  { key: 'name', label: '採集品項' },
+  { key: 'priority', label: '優先序' },
   { key: 'sourceWorkerHours', label: '販售 / 任務採集工時（小時）', help: '左邊是維持本週販售所需工時，右邊是每日任務與額外素材所需工時。像肉類出現在販售側，代表本週販售配方會消耗肉類。' },
   { key: 'totalWorkerHours', label: '總採集工時（小時）', help: '販售採集工時加上任務採集工時。' },
-  { key: 'elapsedHours', label: '等待時間（小時）', help: '依起手人手與輪替規則估算，完成這個品項需求大約需要的小時數。' },
-  { key: 'status', label: '狀態', type: 'tag', help: '可完成表示目前時間窗內可完成；排隊表示同產業人手已滿，需等前面品項完成後輪替；瓶頸表示目前設定下超出產能。' },
+  { key: 'elapsedHours', label: '等待時間（小時）' },
+  { key: 'status', label: '狀態', type: 'tag' },
 ];
 
 const OPERATIONS_CROP_COLUMNS = [

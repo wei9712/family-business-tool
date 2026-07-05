@@ -1,6 +1,8 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { NumberField, SelectionField } from './FormControls.jsx';
 
+const MATERIAL_CATEGORIES = ['全部', '作物', '瓷器', '素材'];
+
 export function ManualMaterialsEditor({ materialOptions, materials, onAdd, onRemove, onUpdate }) {
   return (
     <section className="workspace-panel material-panel">
@@ -21,12 +23,33 @@ export function ManualMaterialsEditor({ materialOptions, materials, onAdd, onRem
           <div className="entry-row entry-row--manual" key={material.id}>
             <div className="entry-index">{index + 1}</div>
             <SelectionField
+              label="分類"
+              value={material.category ?? '全部'}
+              onChange={(value) => onUpdate(material.id, 'category', value)}
+            >
+              {MATERIAL_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </SelectionField>
+            <label className="field">
+              <span>搜尋</span>
+              <input
+                className="control"
+                placeholder="輸入品項名稱"
+                type="search"
+                value={material.search ?? ''}
+                onChange={(event) => onUpdate(material.id, 'search', event.target.value)}
+              />
+            </label>
+            <SelectionField
               label="素材名稱"
               value={material.name}
               onChange={(value) => onUpdate(material.id, 'name', value)}
             >
               <option value="">選擇素材</option>
-              {materialOptions.map((option) => (
+              {filterMaterialOptions(materialOptions, material).map((option) => (
                 <option key={option.name} value={option.name}>
                   {option.label}
                 </option>
@@ -41,4 +64,16 @@ export function ManualMaterialsEditor({ materialOptions, materials, onAdd, onRem
       </div>
     </section>
   );
+}
+
+function filterMaterialOptions(materialOptions, material) {
+  const category = material.category ?? '全部';
+  const search = (material.search ?? '').trim().toLocaleLowerCase('zh-Hant');
+
+  return materialOptions.filter((option) => {
+    const matchesCategory = category === '全部' || option.category === category;
+    const matchesSearch = !search || option.name.toLocaleLowerCase('zh-Hant').includes(search) || option.label.toLocaleLowerCase('zh-Hant').includes(search);
+
+    return matchesCategory && matchesSearch;
+  });
 }

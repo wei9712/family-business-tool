@@ -501,7 +501,7 @@ input[type='checkbox'] {
 }
 
 .entry-row--manual {
-  grid-template-columns: 34px minmax(0, 1fr) 110px 44px;
+  grid-template-columns: 34px 130px 180px minmax(0, 1fr) 110px 44px;
 }
 
 .entry-index {

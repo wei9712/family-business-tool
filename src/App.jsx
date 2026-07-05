@@ -26,6 +26,8 @@ const createEmptyTask = () => ({
 
 const createEmptyMaterial = () => ({
   id: crypto.randomUUID(),
+  category: '全部',
+  search: '',
   name: '',
   quantity: 1,
 });
@@ -37,7 +39,7 @@ const initialWeeklySales = {
 
 const initialSettings = {
   businessLevel: 1,
-  fertilizerEnabled: false,
+  fertilizerEnabled: true,
   wateringEnabled: true,
   materialEfficiencyLevel: 1,
   seatCount: 6,
@@ -50,7 +52,9 @@ function createMaterialOptions(data) {
 
   data.ceramics.forEach((item) => {
     optionMap.set(item.品項名稱, {
+      category: '瓷器',
       label: `Lv.${item.等級} 瓷器：${item.品項名稱}`,
+      level: item.等級,
       name: item.品項名稱,
       sort: `1-${String(item.等級).padStart(2, '0')}-${item.品項名稱}`,
     });
@@ -58,7 +62,9 @@ function createMaterialOptions(data) {
 
   data.cropTimes.forEach((crop) => {
     optionMap.set(crop.作物名稱, {
+      category: '作物',
       label: `Lv.${crop.等級} 作物：${crop.作物名稱}`,
+      level: crop.等級,
       name: crop.作物名稱,
       sort: `2-${String(crop.等級).padStart(2, '0')}-${crop.作物名稱}`,
     });
@@ -68,7 +74,9 @@ function createMaterialOptions(data) {
     item.材料.forEach((material) => {
       if (!optionMap.has(material.名稱)) {
         optionMap.set(material.名稱, {
+          category: '素材',
           label: `素材：${material.名稱}`,
+          level: null,
           name: material.名稱,
           sort: `3-${material.名稱}`,
         });
@@ -106,9 +114,17 @@ export function App() {
   }, []);
 
   const recipeOptions = useMemo(() => (plannerData ? createRecipeOptions(plannerData) : []), [plannerData]);
-  const wineOptions = useMemo(() => recipeOptions.filter((option) => option.type === '酒水'), [recipeOptions]);
-  const dishOptions = useMemo(() => recipeOptions.filter((option) => option.type === '菜品'), [recipeOptions]);
+  const filteredRecipeOptions = useMemo(
+    () => recipeOptions.filter((option) => option.level === Number(settings.businessLevel)),
+    [recipeOptions, settings.businessLevel],
+  );
+  const wineOptions = useMemo(() => filteredRecipeOptions.filter((option) => option.type === '酒水'), [filteredRecipeOptions]);
+  const dishOptions = useMemo(() => filteredRecipeOptions.filter((option) => option.type === '菜品'), [filteredRecipeOptions]);
   const materialOptions = useMemo(() => (plannerData ? createMaterialOptions(plannerData) : []), [plannerData]);
+  const filteredMaterialOptions = useMemo(
+    () => materialOptions.filter((option) => option.level === null || option.level === Number(settings.businessLevel)),
+    [materialOptions, settings.businessLevel],
+  );
   const salesPlan = useMemo(() => (plannerData ? createSalesPlan(plannerData, settings, weeklySales) : null), [plannerData, settings, weeklySales]);
   const planningSettings = useMemo(
     () => ({
@@ -251,14 +267,14 @@ export function App() {
                   onChange={updateWeeklySales}
                 />
                 <TaskEditor
-                  recipeOptions={recipeOptions}
+                  recipeOptions={filteredRecipeOptions}
                   tasks={tasks}
                   onAdd={addTask}
                   onRemove={removeTask}
                   onUpdate={updateTask}
                 />
                 <ManualMaterialsEditor
-                  materialOptions={materialOptions}
+                  materialOptions={filteredMaterialOptions}
                   materials={manualMaterials}
                   onAdd={addManualMaterial}
                   onRemove={removeManualMaterial}
