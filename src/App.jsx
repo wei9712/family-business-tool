@@ -37,6 +37,40 @@ const initialSettings = {
   employeeEfficiencyLevel: 1,
 };
 
+function createMaterialOptions(data) {
+  const optionMap = new Map();
+
+  data.ceramics.forEach((item) => {
+    optionMap.set(item.品項名稱, {
+      label: `Lv.${item.等級} 瓷器：${item.品項名稱}`,
+      name: item.品項名稱,
+      sort: `1-${String(item.等級).padStart(2, '0')}-${item.品項名稱}`,
+    });
+  });
+
+  data.cropTimes.forEach((crop) => {
+    optionMap.set(crop.作物名稱, {
+      label: `Lv.${crop.等級} 作物：${crop.作物名稱}`,
+      name: crop.作物名稱,
+      sort: `2-${String(crop.等級).padStart(2, '0')}-${crop.作物名稱}`,
+    });
+  });
+
+  [...data.dishes, ...data.wines, ...data.ceramics].forEach((item) => {
+    item.材料.forEach((material) => {
+      if (!optionMap.has(material.名稱)) {
+        optionMap.set(material.名稱, {
+          label: `素材：${material.名稱}`,
+          name: material.名稱,
+          sort: `3-${material.名稱}`,
+        });
+      }
+    });
+  });
+
+  return [...optionMap.values()].sort((a, b) => a.sort.localeCompare(b.sort, 'zh-Hant'));
+}
+
 export function App() {
   const [plannerData, setPlannerData] = useState(null);
   const [tasks, setTasks] = useState([createEmptyTask()]);
@@ -63,6 +97,7 @@ export function App() {
   }, []);
 
   const recipeOptions = useMemo(() => (plannerData ? createRecipeOptions(plannerData) : []), [plannerData]);
+  const materialOptions = useMemo(() => (plannerData ? createMaterialOptions(plannerData) : []), [plannerData]);
   const salesPlan = useMemo(() => (plannerData ? createSalesPlan(plannerData, settings) : null), [plannerData, settings]);
   const planningSettings = useMemo(
     () => ({
@@ -176,7 +211,7 @@ export function App() {
                   onUpdate={updateTask}
                 />
                 <ManualMaterialsEditor
-                  cropTimes={plannerData.cropTimes}
+                  materialOptions={materialOptions}
                   materials={manualMaterials}
                   onAdd={addManualMaterial}
                   onRemove={removeManualMaterial}

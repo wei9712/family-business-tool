@@ -1,21 +1,10 @@
-export function SelectionField({ children, label, list, onChange, placeholder, value }) {
+export function SelectionField({ children, label, onChange, value }) {
   return (
     <label className="field">
       <span>{label}</span>
-      {children ? (
-        <select className="control" value={value} onChange={(event) => onChange(event.target.value)}>
-          {children}
-        </select>
-      ) : (
-        <input
-          className="control"
-          list={list}
-          placeholder={placeholder}
-          type="text"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
+      <select className="control" value={value} onChange={(event) => onChange(event.target.value)}>
+        {children}
+      </select>
     </label>
   );
 }

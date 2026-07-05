@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { NumberField, SelectionField } from './FormControls.jsx';
 
-export function ManualMaterialsEditor({ cropTimes, materials, onAdd, onRemove, onUpdate }) {
+export function ManualMaterialsEditor({ materialOptions, materials, onAdd, onRemove, onUpdate }) {
   return (
     <section className="workspace-panel material-panel">
       <div className="panel-header">
@@ -22,11 +22,16 @@ export function ManualMaterialsEditor({ cropTimes, materials, onAdd, onRemove, o
             <div className="entry-index">{index + 1}</div>
             <SelectionField
               label="素材名稱"
-              list="known-materials"
-              placeholder="例如：土豆、粗礦石、原木"
               value={material.name}
               onChange={(value) => onUpdate(material.id, 'name', value)}
-            />
+            >
+              <option value="">選擇素材</option>
+              {materialOptions.map((option) => (
+                <option key={option.name} value={option.name}>
+                  {option.label}
+                </option>
+              ))}
+            </SelectionField>
             <NumberField label="數量" value={material.quantity} onChange={(value) => onUpdate(material.id, 'quantity', value)} />
             <button className="icon-only danger" type="button" onClick={() => onRemove(material.id)} title="移除素材">
               <Trash2 aria-hidden="true" size={18} />
@@ -34,12 +39,6 @@ export function ManualMaterialsEditor({ cropTimes, materials, onAdd, onRemove, o
           </div>
         ))}
       </div>
-
-      <datalist id="known-materials">
-        {cropTimes.map((crop) => (
-          <option key={crop.作物名稱} value={crop.作物名稱} />
-        ))}
-      </datalist>
     </section>
   );
 }
