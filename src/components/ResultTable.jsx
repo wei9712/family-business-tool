@@ -46,8 +46,28 @@ function formatCell(value, column) {
   }
 
   if (column.type === 'tag') {
-    return <span className={`source-tag source-tag--${value === '販售' ? 'sales' : 'task'}`}>{value}</span>;
+    return <span className={`source-tag source-tag--${getTagTone(value)}`}>{value}</span>;
   }
 
   return value;
+}
+
+function getTagTone(value) {
+  if (value === '販售') {
+    return 'sales';
+  }
+
+  if (value === '任務') {
+    return 'task';
+  }
+
+  if (value === '瓶頸' || value === '有瓶頸') {
+    return 'warning';
+  }
+
+  if (value === '可完成' || value === '可維持') {
+    return 'success';
+  }
+
+  return 'neutral';
 }

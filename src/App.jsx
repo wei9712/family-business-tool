@@ -12,6 +12,7 @@ import {
   calculateTotalCropHours,
   calculateTotalMaterialHours,
   createGatheringPlan,
+  createOperationsPlan,
   createRecipeOptions,
   createSalesPlan,
   getFieldCountForBusinessLevel,
@@ -141,6 +142,10 @@ export function App() {
   const totalCropHours = plan ? calculateTotalCropHours(plan.cropNeeds) : 0;
   const totalMaterialHours = plan ? calculateTotalMaterialHours(plan.unresolvedMaterials) : 0;
   const gatheringPlan = plan ? createGatheringPlan(plan.unresolvedMaterials, settings) : null;
+  const operationsPlan =
+    plan && taskOnlyPlan && salesOnlyPlan && salesPlan
+      ? createOperationsPlan({ plan, salesOnlyPlan, salesPlan, settings, taskOnlyPlan })
+      : null;
   const selectedTaskCount = tasks.filter((task) => task.recipeId && Number(task.quantity) > 0).length;
   const fieldCount = getFieldCountForBusinessLevel(settings.businessLevel);
 
@@ -217,7 +222,7 @@ export function App() {
           </div>
         )}
 
-        {status === 'ready' && plannerData && plan && taskOnlyPlan && salesOnlyPlan && salesPlan && gatheringPlan && (
+        {status === 'ready' && plannerData && plan && taskOnlyPlan && salesOnlyPlan && salesPlan && gatheringPlan && operationsPlan && (
           <div className="workflow">
             <section className="workflow-section workflow-section--settings">
               <SectionHeader
@@ -282,6 +287,7 @@ export function App() {
               </section>
               <PlannerResults
                 gatheringPlan={gatheringPlan}
+                operationsPlan={operationsPlan}
                 plan={plan}
                 salesOnlyPlan={salesOnlyPlan}
                 salesPlan={salesPlan}

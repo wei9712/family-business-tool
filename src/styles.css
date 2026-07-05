@@ -802,6 +802,12 @@ td {
   font-weight: 850;
 }
 
+.source-tag--neutral {
+  color: #47534d;
+  border-color: #d9e3de;
+  background: #f6f8f7;
+}
+
 .source-tag--sales {
   color: #5c4732;
   border-color: #eadcc8;
@@ -812,6 +818,18 @@ td {
   color: #334b5f;
   border-color: #d9e4ed;
   background: #f3f7fa;
+}
+
+.source-tag--success {
+  color: #23533e;
+  border-color: #cfe5d8;
+  background: #f0f8f3;
+}
+
+.source-tag--warning {
+  color: #7a4b13;
+  border-color: #efd8af;
+  background: #fff7e8;
 }
 
 tbody tr:nth-child(even) td {

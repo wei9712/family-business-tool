@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Boxes, ClipboardList, Hammer, Store } from 'lucide-react';
+import { Boxes, ClipboardList, Hammer, Route, Store } from 'lucide-react';
 import { ResultTable } from './ResultTable.jsx';
 
 const SALES_COLUMNS = [
@@ -20,6 +20,28 @@ const GATHERING_COLUMNS = [
   { key: 'productionHours', label: '人工時數' },
   { key: 'workSharePercent', label: '工作占比' },
   { key: 'estimatedElapsedHours', label: '等待時間' },
+];
+
+const OPERATIONS_GATHERING_COLUMNS = [
+  { key: 'industry', label: '產業', type: 'tag' },
+  { key: 'salesWorkerHours', label: '販售工時' },
+  { key: 'taskWorkerHours', label: '任務工時' },
+  { key: 'totalWorkerHours', label: '總工時' },
+  { key: 'recommendedGatherers', label: '建議人手' },
+  { key: 'maxGatherers', label: '上限' },
+  { key: 'elapsedHours', label: '等待時間' },
+  { key: 'status', label: '狀態', type: 'tag' },
+];
+
+const OPERATIONS_CROP_COLUMNS = [
+  { key: 'name', label: '作物' },
+  { key: 'salesQuantity', label: '販售需求' },
+  { key: 'taskQuantity', label: '任務需求' },
+  { key: 'quantity', label: '總需求' },
+  { key: 'seedsNeeded', label: '種子數' },
+  { key: 'batchesNeeded', label: '批次' },
+  { key: 'elapsedHours', label: '等待時間' },
+  { key: 'status', label: '狀態', type: 'tag' },
 ];
 
 const SIMPLE_MATERIAL_COLUMNS = [
@@ -51,10 +73,17 @@ const MATERIAL_COLUMNS = [
   { key: 'productionHours', label: '人工作業時數' },
 ];
 
-export function PlannerResults({ gatheringPlan, plan, salesOnlyPlan, salesPlan, taskOnlyPlan }) {
-  const [activeTab, setActiveTab] = useState('sales');
+export function PlannerResults({ gatheringPlan, operationsPlan, plan, salesOnlyPlan, salesPlan, taskOnlyPlan }) {
+  const [activeTab, setActiveTab] = useState('operations');
   const tabs = useMemo(
     () => [
+      {
+        id: 'operations',
+        label: '營運建議',
+        icon: Route,
+        count: operationsPlan.bottlenecks.length,
+        content: <OperationsAnalysis operationsPlan={operationsPlan} />,
+      },
       {
         id: 'sales',
         label: '販售分析',
@@ -84,7 +113,7 @@ export function PlannerResults({ gatheringPlan, plan, salesOnlyPlan, salesPlan, 
         content: <CropAnalysis plan={plan} salesOnlyPlan={salesOnlyPlan} taskOnlyPlan={taskOnlyPlan} />,
       },
     ],
-    [gatheringPlan, plan, salesOnlyPlan, salesPlan, taskOnlyPlan],
+    [gatheringPlan, operationsPlan, plan, salesOnlyPlan, salesPlan, taskOnlyPlan],
   );
   const activeContent = tabs.find((tab) => tab.id === activeTab)?.content ?? tabs[0].content;
 
@@ -115,6 +144,48 @@ export function PlannerResults({ gatheringPlan, plan, salesOnlyPlan, salesPlan, 
         {activeContent}
       </div>
     </section>
+  );
+}
+
+function OperationsAnalysis({ operationsPlan }) {
+  const activeGatheringRows = operationsPlan.gatheringRows.filter((row) => row.totalWorkerHours > 0);
+  const cropRows = operationsPlan.cropRows.filter((row) => row.quantity > 0);
+  const statusNote =
+    operationsPlan.status === '可維持'
+      ? '目前週產能可覆蓋販售與任務需求'
+      : operationsPlan.status === '未設定販售'
+        ? '未選擇本週販售品項，僅評估任務需求'
+        : `需優先處理：${operationsPlan.bottlenecks.join('、')}`;
+
+  return (
+    <>
+      <div className="insight-grid">
+        <InsightCard label="整體狀態" value={operationsPlan.status} note={statusNote} tone={operationsPlan.status === '可維持' ? 'primary' : 'neutral'} />
+        <InsightCard
+          label="建議採集人手"
+          value={`${operationsPlan.recommendedGatherers} 位`}
+          note={`${operationsPlan.guestCap} 位莊客上限，依產業分配`}
+        />
+        <InsightCard
+          label="週期等待"
+          value={`${Math.max(operationsPlan.gatheringElapsedHours, operationsPlan.totalCropHours)} 小時`}
+          note={`採集 ${operationsPlan.gatheringElapsedHours} 小時，種植 ${operationsPlan.totalCropHours} 小時`}
+        />
+      </div>
+      <ResultTable
+        title="產業人手推薦"
+        description="以目前規劃時間窗估算每個產業需要配置幾位莊客，目標是在維持販售的同時完成本週任務。"
+        columns={OPERATIONS_GATHERING_COLUMNS}
+        rows={activeGatheringRows}
+      />
+      <ResultTable
+        title="作物產能檢查"
+        description="將販售維持需求與任務需求合併檢查，評估目前農田與肥料設定是否能在時間窗內完成。"
+        columns={OPERATIONS_CROP_COLUMNS}
+        rows={cropRows}
+        variant="wide"
+      />
+    </>
   );
 }
 

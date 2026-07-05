@@ -183,6 +183,81 @@ export function createGatheringPlan(materials, settings = {}) {
   };
 }
 
+export function createOperationsPlan({ plan, salesOnlyPlan, salesPlan, settings = {}, taskOnlyPlan }) {
+  const businessLevel = clampBusinessLevel(settings.businessLevel);
+  const guestCap = getGuestCapForBusinessLevel(businessLevel);
+  const weeklyHours = toPositiveNumber(settings.weeklySalesHours) || 168;
+  const maxGatherersPerIndustry = Math.min(MAX_GATHERERS, guestCap);
+  const salesIndustryPlans = createIndustryGatheringPlans(salesOnlyPlan.unresolvedMaterials, guestCap);
+  const taskIndustryPlans = createIndustryGatheringPlans(taskOnlyPlan.unresolvedMaterials, guestCap);
+  const gatheringRows = GATHERING_INDUSTRIES.map((industry) => {
+    const salesWorkerHours = salesIndustryPlans.find((row) => row.industry === industry)?.totalWorkerHours ?? 0;
+    const taskWorkerHours = taskIndustryPlans.find((row) => row.industry === industry)?.totalWorkerHours ?? 0;
+    const totalWorkerHours = round(salesWorkerHours + taskWorkerHours);
+    const requiredGatherers = totalWorkerHours > 0 ? Math.ceil(totalWorkerHours / weeklyHours) : 0;
+    const recommendedGatherers = Math.min(requiredGatherers, maxGatherersPerIndustry);
+    const capacityHours = round(maxGatherersPerIndustry * weeklyHours);
+    const elapsedHours = recommendedGatherers > 0 ? round(totalWorkerHours / recommendedGatherers) : 0;
+    const status = totalWorkerHours > capacityHours ? '瓶頸' : totalWorkerHours > 0 ? '可完成' : '無需求';
+
+    return {
+      industry,
+      salesWorkerHours,
+      taskWorkerHours,
+      totalWorkerHours,
+      recommendedGatherers,
+      maxGatherers: maxGatherersPerIndustry,
+      capacityHours,
+      elapsedHours,
+      status,
+    };
+  });
+  const activeGatheringRows = gatheringRows.filter((row) => row.totalWorkerHours > 0);
+  const recommendedGatherers = activeGatheringRows.reduce((total, row) => total + row.recommendedGatherers, 0);
+  const gatheringElapsedHours = activeGatheringRows.reduce((max, row) => Math.max(max, row.elapsedHours), 0);
+  const gatheringBottlenecks = activeGatheringRows.filter((row) => row.status === '瓶頸');
+  const cropRows = plan.cropNeeds.map((crop) => {
+    const salesCrop = salesOnlyPlan.cropNeeds.find((row) => row.name === crop.name);
+    const taskCrop = taskOnlyPlan.cropNeeds.find((row) => row.name === crop.name);
+
+    return {
+      name: crop.name,
+      salesQuantity: salesCrop?.quantity ?? 0,
+      taskQuantity: taskCrop?.quantity ?? 0,
+      quantity: crop.quantity,
+      seedsNeeded: crop.seedsNeeded,
+      batchesNeeded: crop.batchesNeeded,
+      elapsedHours: crop.elapsedHours,
+      status: crop.elapsedHours > weeklyHours ? '瓶頸' : '可完成',
+    };
+  });
+  const totalCropHours = calculateTotalCropHours(plan.cropNeeds);
+  const cropStatus = totalCropHours > weeklyHours ? '瓶頸' : totalCropHours > 0 ? '可完成' : '無需求';
+  const cropBottlenecks = cropRows.filter((row) => row.status === '瓶頸');
+  const guestStatus = recommendedGatherers > guestCap ? '瓶頸' : recommendedGatherers > 0 ? '可完成' : '無需求';
+  const bottlenecks = [
+    ...gatheringBottlenecks.map((row) => `${row.industry}採集`),
+    ...(cropStatus === '瓶頸' ? ['種植排程'] : []),
+    ...(guestStatus === '瓶頸' ? ['莊客上限'] : []),
+  ];
+  const status = salesPlan.rows.length === 0 ? '未設定販售' : bottlenecks.length > 0 ? '有瓶頸' : '可維持';
+
+  return {
+    status,
+    weeklyHours,
+    guestCap,
+    recommendedGatherers,
+    gatheringElapsedHours: round(gatheringElapsedHours),
+    gatheringRows,
+    cropRows,
+    totalCropHours,
+    cropStatus,
+    guestStatus,
+    bottlenecks,
+    salesConfigured: salesPlan.rows.length > 0,
+  };
+}
+
 export function createSalesPlan(data, settings = {}, weeklySales = {}) {
   const businessLevel = clampBusinessLevel(settings.businessLevel);
   const seatCount = clampSeatCount(settings.seatCount);
