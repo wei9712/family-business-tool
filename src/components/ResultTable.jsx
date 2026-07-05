@@ -28,7 +28,7 @@ export function ResultTable({ columns, description, rows, title, variant = 'stan
               rows.map((row, rowIndex) => (
                 <tr key={`${row.name ?? row.recipeId ?? title}-${rowIndex}`}>
                   {columns.map((column) => (
-                    <td key={column.key}>{formatCell(row[column.key])}</td>
+                    <td key={column.key}>{formatCell(row[column.key], column)}</td>
                   ))}
                 </tr>
               ))
@@ -40,9 +40,13 @@ export function ResultTable({ columns, description, rows, title, variant = 'stan
   );
 }
 
-function formatCell(value) {
+function formatCell(value, column) {
   if (value === null || value === undefined || value === '') {
     return '-';
+  }
+
+  if (column.type === 'tag') {
+    return <span className={`source-tag source-tag--${value === '販售' ? 'sales' : 'task'}`}>{value}</span>;
   }
 
   return value;

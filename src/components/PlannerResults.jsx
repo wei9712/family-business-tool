@@ -22,11 +22,13 @@ const GATHERING_COLUMNS = [
 ];
 
 const SIMPLE_MATERIAL_COLUMNS = [
+  { key: 'source', label: '來源', type: 'tag' },
   { key: 'name', label: '素材' },
   { key: 'quantity', label: '數量' },
 ];
 
 const CROP_COLUMNS = [
+  { key: 'source', label: '來源', type: 'tag' },
   { key: 'name', label: '作物' },
   { key: 'quantity', label: '需求產量' },
   { key: 'level', label: '等級' },
@@ -157,6 +159,9 @@ function GatheringAnalysis({ gatheringPlan }) {
 }
 
 function MaterialAnalysis({ plan, salesOnlyPlan, taskOnlyPlan }) {
+  const directMaterials = withSourceRows(taskOnlyPlan.directMaterials, salesOnlyPlan.directMaterials);
+  const rawMaterials = withSourceRows(taskOnlyPlan.rawMaterials, salesOnlyPlan.rawMaterials);
+
   return (
     <>
       <div className="insight-grid">
@@ -164,22 +169,20 @@ function MaterialAnalysis({ plan, salesOnlyPlan, taskOnlyPlan }) {
         <InsightCard label="原始素材種類" value={`${plan.rawMaterials.length} 種`} note="加工品展開後總盤點" />
         <InsightCard label="非種植素材" value={`${plan.unresolvedMaterials.length} 種`} note="需採集或其他來源取得" />
       </div>
-      <div className="analysis-split">
-        <ResultTable
-          title="任務原始素材"
-          description="每日任務與額外素材展開後需要準備的原始素材，不含每週販售需求。"
-          columns={SIMPLE_MATERIAL_COLUMNS}
-          rows={taskOnlyPlan.rawMaterials}
-          variant="compact"
-        />
-        <ResultTable
-          title="販售原始素材"
-          description="每週自訂販售品項展開後需要準備的原始素材。未選販售品項時不會產生資料。"
-          columns={SIMPLE_MATERIAL_COLUMNS}
-          rows={salesOnlyPlan.rawMaterials}
-          variant="compact"
-        />
-      </div>
+      <ResultTable
+        title="直接需求素材"
+        description="整合每日任務、額外素材與本週販售規劃後，統計第一層直接需要準備的素材與加工品。"
+        columns={SIMPLE_MATERIAL_COLUMNS}
+        rows={directMaterials}
+        variant="compact"
+      />
+      <ResultTable
+        title="原始素材需求"
+        description="將所有加工品展開至最終原始素材，並以標籤標示需求來自任務或販售。"
+        columns={SIMPLE_MATERIAL_COLUMNS}
+        rows={rawMaterials}
+        variant="compact"
+      />
       <ResultTable
         title="非種植素材需求"
         description="依據目前採集效率換算一般素材與木頭素材的需求量與工作時間。"
@@ -194,6 +197,7 @@ function CropAnalysis({ plan, salesOnlyPlan, taskOnlyPlan }) {
   const totalSeeds = plan.cropNeeds.reduce((total, crop) => total + crop.seedsNeeded, 0);
   const maxWait = plan.cropNeeds.reduce((max, crop) => Math.max(max, crop.elapsedHours), 0);
   const topCrop = [...plan.cropNeeds].sort((a, b) => b.quantity - a.quantity)[0];
+  const cropNeeds = withSourceRows(taskOnlyPlan.cropNeeds, salesOnlyPlan.cropNeeds);
 
   return (
     <>
@@ -202,31 +206,22 @@ function CropAnalysis({ plan, salesOnlyPlan, taskOnlyPlan }) {
         <InsightCard label="種子總數" value={`${totalSeeds} 顆`} note="依需求量與單顆產量估算" />
         <InsightCard label="最長等待" value={`${maxWait} 小時`} note={topCrop ? `主要作物：${topCrop.name}` : '尚無作物需求'} />
       </div>
-      <div className="analysis-split">
-        <ResultTable
-          title="任務種植規劃"
-          description="每日任務與額外素材造成的作物需求，不含每週販售品項。"
-          columns={CROP_COLUMNS}
-          rows={taskOnlyPlan.cropNeeds}
-          variant="wide"
-        />
-        <ResultTable
-          title="販售種植規劃"
-          description="每週自訂販售品項造成的作物需求。未選販售品項時不會產生資料。"
-          columns={CROP_COLUMNS}
-          rows={salesOnlyPlan.cropNeeds}
-          variant="wide"
-        />
-      </div>
       <ResultTable
-        title="合併種植規劃"
-        description="依據任務與販售的總需求、農田數量、單批生長時間與肥料設定，估算種子需求、批次、等待時間與預估產量。"
+        title="種植規劃"
+        description="依據需求來源、農田數量、單批生長時間與肥料設定，估算種子需求、批次、等待時間與預估產量。"
         columns={CROP_COLUMNS}
-        rows={plan.cropNeeds}
+        rows={cropNeeds}
         variant="wide"
       />
     </>
   );
+}
+
+function withSourceRows(taskRows, salesRows) {
+  return [
+    ...taskRows.map((row) => ({ ...row, source: '任務' })),
+    ...salesRows.map((row) => ({ ...row, source: '販售' })),
+  ];
 }
 
 function InsightCard({ label, note, tone = 'neutral', value }) {
