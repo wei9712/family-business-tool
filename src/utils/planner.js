@@ -19,6 +19,19 @@ const MATERIAL_EFFICIENCY_BY_LEVEL = {
   4: 1.1,
 };
 const BASE_SALE_MINUTES = 62 * MATERIAL_EFFICIENCY_BY_LEVEL[3];
+const MAX_GATHERERS = 3;
+const GUEST_CAP_BY_BUSINESS_LEVEL = {
+  1: 10,
+  2: 10,
+  3: 15,
+  4: 20,
+  5: 30,
+  6: 35,
+  7: 45,
+  8: 55,
+  9: 65,
+  10: 75,
+};
 
 export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {}, salesPlan = []) {
   const fieldCount = clampFieldCount(farmSettings.fieldCount);
@@ -131,6 +144,36 @@ export function calculateTotalMaterialHours(materials) {
   return round(materials.reduce((total, material) => total + material.productionHours, 0));
 }
 
+export function createGatheringPlan(materials, settings = {}) {
+  const businessLevel = clampBusinessLevel(settings.businessLevel);
+  const guestCap = getGuestCapForBusinessLevel(businessLevel);
+  const maxGatherers = Math.min(MAX_GATHERERS, guestCap);
+  const totalWorkerHours = calculateTotalMaterialHours(materials);
+  const recommendedGatherers = recommendGatherers(totalWorkerHours, maxGatherers);
+  const elapsedHours = recommendedGatherers > 0 ? round(totalWorkerHours / recommendedGatherers) : 0;
+
+  return {
+    businessLevel,
+    guestCap,
+    maxGatherers,
+    recommendedGatherers,
+    totalWorkerHours,
+    elapsedHours,
+    rows: materials.map((material) => {
+      const share = totalWorkerHours > 0 ? material.productionHours / totalWorkerHours : 0;
+      const assignedWorkHours = round(material.productionHours);
+      const estimatedElapsedHours = recommendedGatherers > 0 ? round(material.productionHours / recommendedGatherers) : 0;
+
+      return {
+        ...material,
+        workSharePercent: Math.round(share * 100),
+        assignedWorkHours,
+        estimatedElapsedHours,
+      };
+    }),
+  };
+}
+
 export function createSalesPlan(data, settings = {}) {
   const businessLevel = clampBusinessLevel(settings.businessLevel);
   const seatCount = clampSeatCount(settings.seatCount);
@@ -181,6 +224,10 @@ export function getFieldCountForBusinessLevel(level) {
   }
 
   return 1;
+}
+
+export function getGuestCapForBusinessLevel(level) {
+  return GUEST_CAP_BY_BUSINESS_LEVEL[clampBusinessLevel(level)];
 }
 
 function expandMaterial(name, quantity, recipeMap, rawMaterials, cropMap, cropNeeds, unresolvedMaterials, stack) {
@@ -332,8 +379,25 @@ function createSalesRow(type, items, seats, quantity, businessLevel, saleMinutes
     seats,
     quantity,
     saleMinutes,
-    totalSalesHours: round((quantity * saleMinutes) / 60),
+    saleRounds: Math.ceil(quantity / seats),
+    elapsedSalesHours: round((Math.ceil(quantity / seats) * saleMinutes) / 60),
   };
+}
+
+function recommendGatherers(totalWorkerHours, maxGatherers) {
+  if (totalWorkerHours <= 0) {
+    return 0;
+  }
+
+  if (totalWorkerHours <= 8) {
+    return 1;
+  }
+
+  if (totalWorkerHours <= 16 && maxGatherers >= 2) {
+    return 2;
+  }
+
+  return maxGatherers;
 }
 
 function chooseRecommendedItem(type, items, businessLevel, data, scoringSettings) {

@@ -5,9 +5,11 @@ import {
   calculateTaskPlan,
   calculateTotalCropHours,
   calculateTotalMaterialHours,
+  createGatheringPlan,
   createRecipeOptions,
   createSalesPlan,
   getFieldCountForBusinessLevel,
+  getGuestCapForBusinessLevel,
 } from './utils/planner.js';
 
 const createEmptyTask = () => ({
@@ -88,6 +90,7 @@ export function App() {
 
   const totalCropHours = plan ? calculateTotalCropHours(plan.cropNeeds) : 0;
   const totalMaterialHours = plan ? calculateTotalMaterialHours(plan.unresolvedMaterials) : 0;
+  const gatheringPlan = plan ? createGatheringPlan(plan.unresolvedMaterials, farmSettings) : null;
   const totalSales = salesPlan ? salesPlan.totalSales : 0;
   const selectedTaskCount = tasks.filter((task) => task.recipeId && Number(task.quantity) > 0).length;
 
@@ -160,7 +163,7 @@ export function App() {
               <MetricCard icon={Utensils} label="已選任務" value={`${selectedTaskCount} 項`} />
               <MetricCard icon={FlaskConical} label="估計販售數" value={`${totalSales} 份`} />
               <MetricCard icon={Clock3} label="估計種植耗時" value={`${totalCropHours} 小時`} />
-              <MetricCard icon={Hammer} label="非種植素材耗時" value={`${totalMaterialHours} 小時`} />
+              <MetricCard icon={Hammer} label="建議採集耗時" value={`${gatheringPlan?.elapsedHours ?? 0} 小時`} />
             </section>
 
             <section className="planner-layout">
@@ -330,10 +333,16 @@ export function App() {
                 <div className="reserved-grid">
                   <span>目前農田</span>
                   <strong>{getFieldCountForBusinessLevel(farmSettings.businessLevel)} 個</strong>
+                  <span>莊客上限</span>
+                  <strong>{getGuestCapForBusinessLevel(farmSettings.businessLevel)} 位</strong>
                   <span>單田容量</span>
                   <strong>16 種子</strong>
                   <span>農田上限</span>
                   <strong>4 個</strong>
+                  <span>建議採集</span>
+                  <strong>{gatheringPlan?.recommendedGatherers ?? 0} 位</strong>
+                  <span>採集上限</span>
+                  <strong>{gatheringPlan?.maxGatherers ?? 0} 位</strong>
                   <span>一般素材</span>
                   <strong>5 / 小時</strong>
                   <span>木頭素材</span>
@@ -367,9 +376,22 @@ export function App() {
                   { key: 'seats', label: '席位' },
                   { key: 'quantity', label: '估計販售' },
                   { key: 'saleMinutes', label: '每份分鐘' },
-                  { key: 'totalSalesHours', label: '總販售時數' },
+                  { key: 'saleRounds', label: '販售輪次' },
+                  { key: 'elapsedSalesHours', label: '並行耗時' },
                 ]}
                 rows={salesPlan.rows}
+              />
+              <ResultTable
+                title="採集人力建議"
+                description="非種植素材最多 3 位莊客同時採集；此表先用總工時平均分攤，作為初估排程。"
+                columns={[
+                  { key: 'name', label: '素材' },
+                  { key: 'quantity', label: '數量' },
+                  { key: 'productionHours', label: '單人耗時' },
+                  { key: 'workSharePercent', label: '工時占比%' },
+                  { key: 'estimatedElapsedHours', label: '建議耗時' },
+                ]}
+                rows={gatheringPlan.rows}
               />
               <ResultTable
                 title="直接材料"
