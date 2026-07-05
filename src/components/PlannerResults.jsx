@@ -22,12 +22,14 @@ const GATHERING_COLUMNS = [
   { key: 'estimatedElapsedHours', label: '等待時間' },
 ];
 
-const OPERATIONS_GATHERING_COLUMNS = [
+const OPERATIONS_MATERIAL_COLUMNS = [
   { key: 'industry', label: '產業', type: 'tag' },
+  { key: 'name', label: '採集品項' },
+  { key: 'priority', label: '優先序' },
   { key: 'salesWorkerHours', label: '販售工時' },
   { key: 'taskWorkerHours', label: '任務工時' },
   { key: 'totalWorkerHours', label: '總工時' },
-  { key: 'recommendedGatherers', label: '建議人手' },
+  { key: 'recommendedGatherers', label: '起手人手' },
   { key: 'maxGatherers', label: '上限' },
   { key: 'elapsedHours', label: '等待時間' },
   { key: 'status', label: '狀態', type: 'tag' },
@@ -148,7 +150,7 @@ export function PlannerResults({ gatheringPlan, operationsPlan, plan, salesOnlyP
 }
 
 function OperationsAnalysis({ operationsPlan }) {
-  const activeGatheringRows = operationsPlan.gatheringRows.filter((row) => row.totalWorkerHours > 0);
+  const activeMaterialRows = operationsPlan.materialRows.filter((row) => row.totalWorkerHours > 0);
   const cropRows = operationsPlan.cropRows.filter((row) => row.quantity > 0);
   const statusNote =
     operationsPlan.status === '可維持'
@@ -173,10 +175,10 @@ function OperationsAnalysis({ operationsPlan }) {
         />
       </div>
       <ResultTable
-        title="產業人手推薦"
-        description="以目前規劃時間窗估算每個產業需要配置幾位莊客，目標是在維持販售的同時完成本週任務。"
-        columns={OPERATIONS_GATHERING_COLUMNS}
-        rows={activeGatheringRows}
+        title="品項人手安排"
+        description="依照遊戲內可操作的採集品項估算起手人手。同一產業最多 3 位莊客，品項完成後再依優先序把人手輪替到下一個素材。"
+        columns={OPERATIONS_MATERIAL_COLUMNS}
+        rows={activeMaterialRows}
       />
       <ResultTable
         title="作物產能檢查"

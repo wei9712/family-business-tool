@@ -216,6 +216,13 @@ export function createOperationsPlan({ plan, salesOnlyPlan, salesPlan, settings 
   const recommendedGatherers = activeGatheringRows.reduce((total, row) => total + row.recommendedGatherers, 0);
   const gatheringElapsedHours = activeGatheringRows.reduce((max, row) => Math.max(max, row.elapsedHours), 0);
   const gatheringBottlenecks = activeGatheringRows.filter((row) => row.status === '瓶頸');
+  const materialRows = createMaterialOperationRows({
+    salesMaterials: salesOnlyPlan.unresolvedMaterials,
+    taskMaterials: taskOnlyPlan.unresolvedMaterials,
+    weeklyHours,
+    gatheringRows,
+    maxGatherersPerIndustry,
+  });
   const cropRows = plan.cropNeeds.map((crop) => {
     const salesCrop = salesOnlyPlan.cropNeeds.find((row) => row.name === crop.name);
     const taskCrop = taskOnlyPlan.cropNeeds.find((row) => row.name === crop.name);
@@ -249,6 +256,7 @@ export function createOperationsPlan({ plan, salesOnlyPlan, salesPlan, settings 
     recommendedGatherers,
     gatheringElapsedHours: round(gatheringElapsedHours),
     gatheringRows,
+    materialRows,
     cropRows,
     totalCropHours,
     cropStatus,
@@ -463,6 +471,127 @@ function createIndustryGatheringPlans(materials, guestCap) {
       elapsedHours,
     };
   });
+}
+
+function createMaterialOperationRows({ salesMaterials, taskMaterials, weeklyHours, gatheringRows, maxGatherersPerIndustry }) {
+  const salesMap = new Map(salesMaterials.map((material) => [material.name, material]));
+  const taskMap = new Map(taskMaterials.map((material) => [material.name, material]));
+  const materialNames = [...new Set([...salesMap.keys(), ...taskMap.keys()])];
+  const rows = materialNames.map((name) => {
+    const salesMaterial = salesMap.get(name);
+    const taskMaterial = taskMap.get(name);
+    const industry = getMaterialIndustry(name);
+    const salesWorkerHours = salesMaterial?.productionHours ?? 0;
+    const taskWorkerHours = taskMaterial?.productionHours ?? 0;
+    const totalWorkerHours = round(salesWorkerHours + taskWorkerHours);
+
+    return {
+      industry,
+      name,
+      salesWorkerHours,
+      taskWorkerHours,
+      totalWorkerHours,
+    };
+  });
+
+  const prioritizedRows = rows
+    .sort((a, b) => a.industry.localeCompare(b.industry, 'zh-Hant') || b.totalWorkerHours - a.totalWorkerHours || a.name.localeCompare(b.name, 'zh-Hant'))
+    .map((row, index, sortedRows) => ({
+      ...row,
+      priority: sortedRows.filter((item) => item.industry === row.industry && item.totalWorkerHours > row.totalWorkerHours).length + 1,
+    }));
+
+  return GATHERING_INDUSTRIES.flatMap((industry) => {
+    const industryPlan = gatheringRows.find((row) => row.industry === industry);
+    const industryRows = prioritizedRows.filter((row) => row.industry === industry && row.totalWorkerHours > 0);
+    const assignments = allocateIndustryMaterialGatherers(industryRows, industryPlan?.recommendedGatherers ?? 0);
+    const completionTimes = calculateIndustryMaterialCompletionTimes(industryRows, assignments);
+
+    return industryRows.map((row) => {
+      const recommendedGatherers = assignments.get(row.name) ?? 0;
+      const elapsedHours = completionTimes.get(row.name) ?? 0;
+      const status = row.totalWorkerHours > maxGatherersPerIndustry * weeklyHours ? '瓶頸' : recommendedGatherers > 0 ? '可完成' : '排隊';
+
+      return {
+        ...row,
+        recommendedGatherers,
+        maxGatherers: maxGatherersPerIndustry,
+        elapsedHours,
+        status,
+      };
+    });
+  });
+}
+
+function allocateIndustryMaterialGatherers(rows, gathererPool) {
+  const assignments = new Map(rows.map((row) => [row.name, 0]));
+  let remainingGatherers = gathererPool;
+
+  rows.slice(0, remainingGatherers).forEach((row) => {
+    assignments.set(row.name, 1);
+    remainingGatherers -= 1;
+  });
+
+  while (remainingGatherers > 0) {
+    const target = rows
+      .filter((row) => assignments.get(row.name) > 0)
+      .sort((a, b) => b.totalWorkerHours / assignments.get(b.name) - a.totalWorkerHours / assignments.get(a.name))[0];
+
+    if (!target) {
+      break;
+    }
+
+    assignments.set(target.name, assignments.get(target.name) + 1);
+    remainingGatherers -= 1;
+  }
+
+  return assignments;
+}
+
+function calculateIndustryMaterialCompletionTimes(rows, assignments) {
+  const remainingWork = new Map(rows.map((row) => [row.name, row.totalWorkerHours]));
+  const activeGatherers = new Map(assignments);
+  const completionTimes = new Map();
+  let elapsedHours = 0;
+
+  while (completionTimes.size < rows.length) {
+    const activeRows = rows.filter((row) => (activeGatherers.get(row.name) ?? 0) > 0 && (remainingWork.get(row.name) ?? 0) > 0);
+
+    if (activeRows.length === 0) {
+      break;
+    }
+
+    const nextCompletion = Math.min(...activeRows.map((row) => remainingWork.get(row.name) / activeGatherers.get(row.name)));
+    elapsedHours = round(elapsedHours + nextCompletion);
+    let releasedGatherers = 0;
+
+    activeRows.forEach((row) => {
+      const nextRemainingWork = round(remainingWork.get(row.name) - activeGatherers.get(row.name) * nextCompletion);
+
+      if (nextRemainingWork <= 0) {
+        releasedGatherers += activeGatherers.get(row.name);
+        activeGatherers.set(row.name, 0);
+        remainingWork.set(row.name, 0);
+        completionTimes.set(row.name, elapsedHours);
+        return;
+      }
+
+      remainingWork.set(row.name, nextRemainingWork);
+    });
+
+    while (releasedGatherers > 0) {
+      const target = rows.find((row) => !completionTimes.has(row.name) && (remainingWork.get(row.name) ?? 0) > 0);
+
+      if (!target) {
+        break;
+      }
+
+      activeGatherers.set(target.name, (activeGatherers.get(target.name) ?? 0) + 1);
+      releasedGatherers -= 1;
+    }
+  }
+
+  return completionTimes;
 }
 
 function getMaterialIndustry(name) {
