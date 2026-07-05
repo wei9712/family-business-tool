@@ -13,7 +13,16 @@ export function ResultTable({ columns, description, rows, title, variant = 'stan
           <thead>
             <tr>
               {columns.map((column) => (
-                <th key={column.key}>{column.label}</th>
+                <th key={column.key}>
+                  <span className="column-heading">
+                    <span>{column.label}</span>
+                    {column.help && (
+                      <span aria-label={column.help} className="column-help" role="img" tabIndex={0} title={column.help}>
+                        ?
+                      </span>
+                    )}
+                  </span>
+                </th>
               ))}
             </tr>
           </thead>

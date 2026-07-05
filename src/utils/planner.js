@@ -195,7 +195,9 @@ export function createOperationsPlan({ plan, salesOnlyPlan, salesPlan, settings 
     const taskWorkerHours = taskIndustryPlans.find((row) => row.industry === industry)?.totalWorkerHours ?? 0;
     const totalWorkerHours = round(salesWorkerHours + taskWorkerHours);
     const requiredGatherers = totalWorkerHours > 0 ? Math.ceil(totalWorkerHours / weeklyHours) : 0;
-    const recommendedGatherers = Math.min(requiredGatherers, maxGatherersPerIndustry);
+    const activeMaterialCount = countActiveIndustryMaterials(industry, salesOnlyPlan.unresolvedMaterials, taskOnlyPlan.unresolvedMaterials);
+    const minimumParallelGatherers = Math.min(activeMaterialCount, maxGatherersPerIndustry);
+    const recommendedGatherers = Math.min(Math.max(requiredGatherers, minimumParallelGatherers), maxGatherersPerIndustry);
     const capacityHours = round(maxGatherersPerIndustry * weeklyHours);
     const elapsedHours = recommendedGatherers > 0 ? round(totalWorkerHours / recommendedGatherers) : 0;
     const status = totalWorkerHours > capacityHours ? '瓶頸' : totalWorkerHours > 0 ? '可完成' : '無需求';
@@ -264,6 +266,14 @@ export function createOperationsPlan({ plan, salesOnlyPlan, salesPlan, settings 
     bottlenecks,
     salesConfigured: salesPlan.rows.length > 0,
   };
+}
+
+function countActiveIndustryMaterials(industry, salesMaterials, taskMaterials) {
+  return new Set(
+    [...salesMaterials, ...taskMaterials]
+      .filter((material) => getMaterialIndustry(material.name) === industry && material.productionHours > 0)
+      .map((material) => material.name),
+  ).size;
 }
 
 export function createSalesPlan(data, settings = {}, weeklySales = {}) {
