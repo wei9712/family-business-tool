@@ -4,13 +4,6 @@ const RECIPE_TYPES = {
   ceramics: '瓷器',
 };
 
-export function createRecipeOptions(data) {
-  return [
-    ...data.dishes.map((item) => toRecipeOption(item, RECIPE_TYPES.dishes)),
-    ...data.wines.map((item) => toRecipeOption(item, RECIPE_TYPES.wines)),
-  ].sort((a, b) => a.level - b.level || a.type.localeCompare(b.type, 'zh-Hant') || a.name.localeCompare(b.name, 'zh-Hant'));
-}
-
 const SEEDS_PER_FIELD = 16;
 const MATERIAL_EFFICIENCY_BY_LEVEL = {
   1: 1.02,
@@ -32,6 +25,13 @@ const GUEST_CAP_BY_BUSINESS_LEVEL = {
   9: 65,
   10: 75,
 };
+
+export function createRecipeOptions(data) {
+  return [
+    ...data.dishes.map((item) => toRecipeOption(item, RECIPE_TYPES.dishes)),
+    ...data.wines.map((item) => toRecipeOption(item, RECIPE_TYPES.wines)),
+  ].sort((a, b) => a.level - b.level || a.type.localeCompare(b.type, 'zh-Hant') || a.name.localeCompare(b.name, 'zh-Hant'));
+}
 
 export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {}, salesPlan = []) {
   const fieldCount = clampFieldCount(farmSettings.fieldCount);
@@ -161,13 +161,12 @@ export function createGatheringPlan(materials, settings = {}) {
     elapsedHours,
     rows: materials.map((material) => {
       const share = totalWorkerHours > 0 ? material.productionHours / totalWorkerHours : 0;
-      const assignedWorkHours = round(material.productionHours);
       const estimatedElapsedHours = recommendedGatherers > 0 ? round(material.productionHours / recommendedGatherers) : 0;
 
       return {
         ...material,
         workSharePercent: Math.round(share * 100),
-        assignedWorkHours,
+        assignedWorkHours: round(material.productionHours),
         estimatedElapsedHours,
       };
     }),
@@ -202,8 +201,8 @@ export function createSalesPlan(data, settings = {}) {
     saleMinutes,
     totalSales,
     rows: [
-      createSalesRow('酒水', data.wines, wineSeats, wineQuantity, businessLevel, saleMinutes, data, scoringSettings),
-      createSalesRow('菜品', data.dishes, dishSeats, dishQuantity, businessLevel, saleMinutes, data, scoringSettings),
+      createSalesRow(RECIPE_TYPES.wines, data.wines, wineSeats, wineQuantity, businessLevel, saleMinutes, data, scoringSettings),
+      createSalesRow(RECIPE_TYPES.dishes, data.dishes, dishSeats, dishQuantity, businessLevel, saleMinutes, data, scoringSettings),
     ].filter((row) => row && row.quantity > 0),
   };
 }
@@ -410,7 +409,8 @@ function chooseRecommendedItem(type, items, businessLevel, data, scoringSettings
       item,
       score: estimateRecipeHours(`${type}:${item.品項名稱}`, data, scoringSettings),
     }))
-    .sort((a, b) => a.score - b.score || b.item.等級 - a.item.等級 || a.item.品項名稱.localeCompare(b.item.品項名稱, 'zh-Hant'))[0]?.item;
+    .sort((a, b) => a.score - b.score || b.item.等級 - a.item.等級 || a.item.品項名稱.localeCompare(b.item.品項名稱, 'zh-Hant'))[0]
+    ?.item;
 }
 
 function estimateRecipeHours(recipeId, data, scoringSettings) {
