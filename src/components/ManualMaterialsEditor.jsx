@@ -3,7 +3,7 @@ import { NumberField, SelectionField } from './FormControls.jsx';
 
 const MATERIAL_CATEGORIES = ['全部', '作物', '瓷器', '素材'];
 
-export function ManualMaterialsEditor({ materialOptions, materials, onAdd, onRemove, onUpdate }) {
+export function ManualMaterialsEditor({ materialOptions, materials, onAdd, onLevelFilterChange, onRemove, onUpdate, showAllLevels }) {
   return (
     <section className="workspace-panel material-panel">
       <div className="panel-header">
@@ -12,6 +12,14 @@ export function ManualMaterialsEditor({ materialOptions, materials, onAdd, onRem
           <h2>額外素材</h2>
           <p>若任務直接需要一般素材或作物，可在此補充。系統會與每日任務合併計算，避免重複統計。</p>
         </div>
+        <label className="inline-toggle">
+          <input
+            checked={showAllLevels}
+            type="checkbox"
+            onChange={(event) => onLevelFilterChange(event.target.checked)}
+          />
+          <span>顯示全部等級</span>
+        </label>
       </div>
 
       <div className="entry-list">

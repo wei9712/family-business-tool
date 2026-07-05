@@ -90,6 +90,7 @@ export function App() {
   const [plannerData, setPlannerData] = useState(null);
   const [tasks, setTasks] = useState([createEmptyTask()]);
   const [manualMaterials, setManualMaterials] = useState([createEmptyMaterial()]);
+  const [showAllMaterialLevels, setShowAllMaterialLevels] = useState(false);
   const [weeklySales, setWeeklySales] = useState(initialWeeklySales);
   const [settings, setSettings] = useState(initialSettings);
   const [status, setStatus] = useState('loading');
@@ -121,8 +122,11 @@ export function App() {
   const dishOptions = useMemo(() => filteredRecipeOptions.filter((option) => option.type === '菜品'), [filteredRecipeOptions]);
   const materialOptions = useMemo(() => (plannerData ? createMaterialOptions(plannerData) : []), [plannerData]);
   const filteredMaterialOptions = useMemo(
-    () => materialOptions.filter((option) => option.level === null || option.level === Number(settings.businessLevel)),
-    [materialOptions, settings.businessLevel],
+    () =>
+      showAllMaterialLevels
+        ? materialOptions
+        : materialOptions.filter((option) => option.level === null || option.level === Number(settings.businessLevel)),
+    [materialOptions, settings.businessLevel, showAllMaterialLevels],
   );
   const salesPlan = useMemo(() => (plannerData ? createSalesPlan(plannerData, settings, weeklySales) : null), [plannerData, settings, weeklySales]);
   const planningSettings = useMemo(
@@ -275,7 +279,9 @@ export function App() {
                 <ManualMaterialsEditor
                   materialOptions={filteredMaterialOptions}
                   materials={manualMaterials}
+                  showAllLevels={showAllMaterialLevels}
                   onAdd={addManualMaterial}
+                  onLevelFilterChange={setShowAllMaterialLevels}
                   onRemove={removeManualMaterial}
                   onUpdate={updateManualMaterial}
                 />
