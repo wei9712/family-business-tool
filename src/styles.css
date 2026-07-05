@@ -846,6 +846,30 @@ td {
   background: #f3f7fa;
 }
 
+.source-tag--fishing {
+  color: #1f5673;
+  border-color: #cfe4ef;
+  background: #eff8fc;
+}
+
+.source-tag--hunting {
+  color: #7a372d;
+  border-color: #efcfc8;
+  background: #fff3f0;
+}
+
+.source-tag--stone {
+  color: #4c4f67;
+  border-color: #d9dbe8;
+  background: #f5f6fb;
+}
+
+.source-tag--forestry {
+  color: #2e5a3d;
+  border-color: #d4e6d8;
+  background: #f2f8f3;
+}
+
 .source-tag--success {
   color: #23533e;
   border-color: #cfe5d8;

@@ -40,6 +40,7 @@ export function createRecipeOptions(data) {
 export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {}, salesPlan = []) {
   const fieldCount = clampFieldCount(farmSettings.fieldCount);
   const fertilizerEnabled = Boolean(farmSettings.fertilizerEnabled);
+  const wateringEnabled = farmSettings.wateringEnabled !== false;
   const materialEfficiencyLevel = clampMaterialEfficiencyLevel(farmSettings.materialEfficiencyLevel);
   const materialEfficiency = MATERIAL_EFFICIENCY_BY_LEVEL[materialEfficiencyLevel];
   const recipeMap = createRecipeMap(data);
@@ -98,7 +99,8 @@ export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {
     rawMaterials: toRows(rawMaterials),
     cropNeeds: toRows(cropNeeds).map((row) => {
       const crop = cropMap.get(row.name);
-      const hoursPerSeed = crop ? crop.hours : 0;
+      const baseHoursPerSeed = crop ? crop.hours : 0;
+      const hoursPerSeed = wateringEnabled ? round(baseHoursPerSeed * 0.8) : baseHoursPerSeed;
       const baseYieldPerSeed = crop ? crop.yieldPerSeed : 0;
       const yieldPerSeed = fertilizerEnabled ? Math.ceil(baseYieldPerSeed * 1.1) : baseYieldPerSeed;
       const seedsNeeded = yieldPerSeed > 0 ? Math.ceil(row.quantity / yieldPerSeed) : 0;
@@ -117,6 +119,7 @@ export function calculateTaskPlan(tasks, manualMaterials, data, farmSettings = {
         fieldCount,
         batchCapacity,
         batchesNeeded,
+        baseHoursPerSeed,
         hoursPerSeed,
         elapsedHours: round(batchesNeeded * hoursPerSeed),
         totalGrowHours: round(seedsNeeded * hoursPerSeed),
@@ -524,6 +527,7 @@ function createMaterialOperationRows({ salesMaterials, taskMaterials, weeklyHour
 
       return {
         ...row,
+        sourceWorkerHours: `${round(row.salesWorkerHours)} / ${round(row.taskWorkerHours)}`,
         recommendedGatherers,
         maxGatherers: maxGatherersPerIndustry,
         elapsedHours,

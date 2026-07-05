@@ -6,7 +6,6 @@ const SALES_COLUMNS = [
   { key: 'type', label: '類型' },
   { key: 'name', label: '推薦品項' },
   { key: 'level', label: '等級' },
-  { key: 'seats', label: '席位' },
   { key: 'quantity', label: '販售數量' },
   { key: 'saleMinutes', label: '每份時間（分鐘）' },
   { key: 'saleRounds', label: '販售輪次' },
@@ -18,7 +17,6 @@ const GATHERING_COLUMNS = [
   { key: 'name', label: '素材' },
   { key: 'quantity', label: '需求數量' },
   { key: 'productionHours', label: '人工時數（小時）' },
-  { key: 'workSharePercent', label: '工作占比' },
   { key: 'estimatedElapsedHours', label: '等待時間（小時）' },
 ];
 
@@ -26,11 +24,8 @@ const OPERATIONS_MATERIAL_COLUMNS = [
   { key: 'industry', label: '產業', type: 'tag', help: '素材所屬的採集產業。同一產業目前最多可同時安排 3 位莊客。' },
   { key: 'name', label: '採集品項', help: '遊戲內實際要派人採集的素材名稱。' },
   { key: 'priority', label: '優先序', help: '同一產業內建議先處理的順序，數字越小越優先。' },
-  { key: 'salesWorkerHours', label: '販售採集工時（小時）', help: '為了維持每週販售品項不中斷，這個素材需要投入的採集工時。像肉類出現在這欄，代表本週販售的菜品或酒水配方會消耗肉類。' },
-  { key: 'taskWorkerHours', label: '任務採集工時（小時）', help: '本週任務與額外素材造成的採集工時，不含每週販售需求。' },
+  { key: 'sourceWorkerHours', label: '販售 / 任務採集工時（小時）', help: '左邊是維持本週販售所需工時，右邊是每日任務與額外素材所需工時。像肉類出現在販售側，代表本週販售配方會消耗肉類。' },
   { key: 'totalWorkerHours', label: '總採集工時（小時）', help: '販售採集工時加上任務採集工時。' },
-  { key: 'recommendedGatherers', label: '起手人手', help: '建議一開始先安排在這個品項的人數。完成後會依優先序輪替到其他品項。' },
-  { key: 'maxGatherers', label: '產業上限', help: '這個品項所屬產業目前最多可同時安排的人數。' },
   { key: 'elapsedHours', label: '等待時間（小時）', help: '依起手人手與輪替規則估算，完成這個品項需求大約需要的小時數。' },
   { key: 'status', label: '狀態', type: 'tag', help: '可完成表示目前時間窗內可完成；排隊表示同產業人手已滿，需等前面品項完成後輪替；瓶頸表示目前設定下超出產能。' },
 ];
@@ -57,10 +52,8 @@ const CROP_COLUMNS = [
   { key: 'name', label: '作物' },
   { key: 'quantity', label: '需求產量' },
   { key: 'level', label: '等級' },
-  { key: 'yieldPerSeed', label: '單顆產量' },
   { key: 'seedsNeeded', label: '種子數' },
   { key: 'batchesNeeded', label: '批次' },
-  { key: 'hoursPerSeed', label: '單批時間（小時）' },
   { key: 'elapsedHours', label: '等待時間（小時）' },
   { key: 'expectedYield', label: '預估產量' },
   { key: 'surplus', label: '剩餘數量' },
@@ -221,7 +214,7 @@ function GatheringAnalysis({ gatheringPlan }) {
       <div className="insight-grid">
         <InsightCard label="建議採集人手" value={`${gatheringPlan.recommendedGatherers} 位`} note={`依 ${activeIndustries.length} 個產業分配，每產業最多 3 位`} tone="primary" />
         <InsightCard label="採集等待" value={`${gatheringPlan.elapsedHours} 小時`} note={`${gatheringPlan.totalWorkerHours} 人工作業時數，可跨產業並行`} />
-        <InsightCard label="主要壓力素材" value={topMaterial?.name ?? '尚無'} note={topMaterial ? `${topMaterial.industry}，${topMaterial.workSharePercent}% 產業占比` : '沒有非種植素材'} />
+        <InsightCard label="主要壓力素材" value={topMaterial?.name ?? '尚無'} note={topMaterial ? `${topMaterial.industry}，${topMaterial.productionHours} 小時` : '沒有非種植素材'} />
       </div>
       <ResultTable
         title="採集配置"
@@ -245,17 +238,17 @@ function MaterialAnalysis({ plan, salesOnlyPlan, taskOnlyPlan }) {
         <InsightCard label="非種植素材" value={`${plan.unresolvedMaterials.length} 種`} note="需採集或其他來源取得" />
       </div>
       <ResultTable
-        title="直接需求素材"
-        description="整合每日任務、額外素材與本週販售規劃後，統計第一層直接需要準備的素材與加工品。"
-        columns={SIMPLE_MATERIAL_COLUMNS}
-        rows={directMaterials}
-        variant="compact"
-      />
-      <ResultTable
         title="原始素材需求"
         description="將所有加工品展開至最終原始素材，並以標籤標示需求來自任務或販售。"
         columns={SIMPLE_MATERIAL_COLUMNS}
         rows={rawMaterials}
+        variant="compact"
+      />
+      <ResultTable
+        title="直接需求素材"
+        description="整合每日任務、額外素材與本週販售規劃後，統計第一層直接需要準備的素材與加工品。"
+        columns={SIMPLE_MATERIAL_COLUMNS}
+        rows={directMaterials}
         variant="compact"
       />
       <ResultTable

@@ -38,6 +38,7 @@ const initialWeeklySales = {
 const initialSettings = {
   businessLevel: 1,
   fertilizerEnabled: false,
+  wateringEnabled: true,
   materialEfficiencyLevel: 1,
   seatCount: 6,
   weeklySalesHours: 168,

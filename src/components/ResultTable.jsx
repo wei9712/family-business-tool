@@ -70,6 +70,22 @@ function getTagTone(value) {
     return 'task';
   }
 
+  if (value === '漁獲') {
+    return 'fishing';
+  }
+
+  if (value === '獵獲') {
+    return 'hunting';
+  }
+
+  if (value === '石料') {
+    return 'stone';
+  }
+
+  if (value === '林業') {
+    return 'forestry';
+  }
+
   if (value === '瓶頸' || value === '有瓶頸') {
     return 'warning';
   }

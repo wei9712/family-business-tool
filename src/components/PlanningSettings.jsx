@@ -77,6 +77,17 @@ export function PlanningSettings({ gatheringPlan, settings, onChange }) {
                 單顆種子產量向上取整後 +10%
               </span>
             </label>
+            <label className="toggle-card">
+              <input
+                checked={settings.wateringEnabled}
+                type="checkbox"
+                onChange={(event) => onChange('wateringEnabled', event.target.checked)}
+              />
+              <span>
+                <strong>使用澆水</strong>
+                種植等待時間減少 20%
+              </span>
+            </label>
           </div>
         </div>
       </div>
