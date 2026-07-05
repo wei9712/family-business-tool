@@ -1,42 +1,33 @@
 import { Plus, Trash2 } from 'lucide-react';
+import { NumberField, SelectionField } from './FormControls.jsx';
 
 export function ManualMaterialsEditor({ cropTimes, materials, onAdd, onRemove, onUpdate }) {
   return (
-    <section className="panel panel--wide">
+    <section className="workspace-panel material-panel">
       <div className="panel-header">
         <div>
+          <span className="panel-kicker">Material input</span>
           <h2>額外素材</h2>
-          <p>任務若直接要求素材，可以在這裡輸入，作物會自動轉成種植需求。</p>
+          <p>若週任務直接要求一般素材或作物，可以在這裡補上，並沿用同一套輸入元件。</p>
         </div>
         <button className="button button--secondary" type="button" onClick={onAdd}>
           <Plus aria-hidden="true" size={17} />
-          新增
+          新增素材
         </button>
       </div>
 
-      <div className="form-stack">
-        {materials.map((material) => (
+      <div className="entry-list">
+        {materials.map((material, index) => (
           <div className="entry-row entry-row--manual" key={material.id}>
-            <label>
-              <span>素材名稱</span>
-              <input
-                list="known-materials"
-                placeholder="例如：土豆、粗礦石、原木"
-                type="text"
-                value={material.name}
-                onChange={(event) => onUpdate(material.id, 'name', event.target.value)}
-              />
-            </label>
-            <label className="quantity-field">
-              <span>數量</span>
-              <input
-                min="1"
-                step="1"
-                type="number"
-                value={material.quantity}
-                onChange={(event) => onUpdate(material.id, 'quantity', event.target.value)}
-              />
-            </label>
+            <div className="entry-index">{index + 1}</div>
+            <SelectionField
+              label="素材名稱"
+              list="known-materials"
+              placeholder="例如：土豆、粗礦石、原木"
+              value={material.name}
+              onChange={(value) => onUpdate(material.id, 'name', value)}
+            />
+            <NumberField label="數量" value={material.quantity} onChange={(value) => onUpdate(material.id, 'quantity', value)} />
             <button className="icon-only danger" type="button" onClick={() => onRemove(material.id)} title="移除素材">
               <Trash2 aria-hidden="true" size={18} />
             </button>

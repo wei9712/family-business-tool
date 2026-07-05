@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Clock3, FlaskConical, Hammer, RefreshCw, Sparkles, Utensils } from 'lucide-react';
+import { AlertCircle, Clock3, FlaskConical, Hammer, RefreshCw, Utensils } from 'lucide-react';
 import { ManualMaterialsEditor } from './components/ManualMaterialsEditor.jsx';
 import { MetricCard } from './components/MetricCard.jsx';
 import { PlannerResults } from './components/PlannerResults.jsx';
@@ -124,24 +124,16 @@ export function App() {
   return (
     <main className="app-shell">
       <section className="workspace">
-        <header className="hero-panel">
-          <div className="hero-copy">
-            <p className="eyebrow">Weekly Planning Console</p>
-            <h1>家業週任務素材計算工具</h1>
-            <p>
-              輸入這週的菜品、酒水與額外素材，快速估算作物種植、採集人力、販售席位與總等待時間。
-            </p>
+        <header className="app-header">
+          <div>
+            <p className="eyebrow">Weekly Planning Workspace</p>
+            <h1>家業週任務素材規劃工具</h1>
+            <p>先設定營運條件，再輸入任務，最後查看本週販售、採集、素材與種植分析。</p>
           </div>
-          <div className="hero-actions">
-            <div className="hero-status">
-              <Sparkles aria-hidden="true" size={18} />
-              <span>目前以家業 {settings.businessLevel} 等估算</span>
-            </div>
-            <button className="button button--primary" type="button" onClick={refreshData}>
-              <RefreshCw aria-hidden="true" size={18} />
-              重新載入資料
-            </button>
-          </div>
+          <button className="button button--primary" type="button" onClick={refreshData}>
+            <RefreshCw aria-hidden="true" size={18} />
+            重新載入資料
+          </button>
         </header>
 
         {status === 'error' && (
@@ -159,22 +151,23 @@ export function App() {
         )}
 
         {status === 'ready' && plannerData && plan && salesPlan && gatheringPlan && (
-          <>
-            <section className="summary-grid" aria-label="規劃摘要">
-              <MetricCard icon={Utensils} label="已選任務" meta="任務池" value={`${selectedTaskCount} 項`} tone="leaf" />
-              <MetricCard icon={FlaskConical} label="建議販售" meta={`${settings.seatCount} 席位`} value={`${salesPlan.totalSales} 份`} tone="amber" />
-              <MetricCard icon={Clock3} label="種植等待" meta={`${fieldCount} 農田`} value={`${totalCropHours} 小時`} tone="sky" />
-              <MetricCard
-                icon={Hammer}
-                label="採集等待"
-                meta={`${gatheringPlan.recommendedGatherers} 人手`}
-                value={`${gatheringPlan.elapsedHours} 小時`}
-                tone="rose"
+          <div className="workflow">
+            <section className="workflow-section workflow-section--settings">
+              <SectionHeader
+                step="01"
+                title="設定條件"
+                description="這些條件會影響販售速度、農田容量、肥料產量與採集人手，先校準再開始輸入。"
               />
+              <PlanningSettings gatheringPlan={gatheringPlan} settings={settings} onChange={updateSetting} />
             </section>
 
-            <section className="planner-grid">
-              <div className="input-column">
+            <section className="workflow-section workflow-section--input">
+              <SectionHeader
+                step="02"
+                title="輸入任務"
+                description="任務品項與額外素材使用同一套輸入元件，降低操作成本，也方便後續擴充搜尋式選單。"
+              />
+              <div className="input-grid">
                 <TaskEditor
                   recipeOptions={recipeOptions}
                   tasks={tasks}
@@ -190,13 +183,43 @@ export function App() {
                   onUpdate={updateManualMaterial}
                 />
               </div>
-              <PlanningSettings gatheringPlan={gatheringPlan} settings={settings} onChange={updateSetting} />
             </section>
 
-            <PlannerResults gatheringPlan={gatheringPlan} plan={plan} salesPlan={salesPlan} />
-          </>
+            <section className="workflow-section workflow-section--analysis">
+              <SectionHeader
+                step="03"
+                title="查看分析結果"
+                description="先看關鍵數字與洞察，再用頁籤查看完整明細，避免一次閱讀所有表格。"
+              />
+              <section className="summary-grid" aria-label="規劃摘要">
+                <MetricCard icon={Utensils} label="已選任務" meta="任務池" value={`${selectedTaskCount} 項`} tone="leaf" />
+                <MetricCard icon={FlaskConical} label="建議販售" meta={`${settings.seatCount} 席位`} value={`${salesPlan.totalSales} 份`} tone="amber" />
+                <MetricCard icon={Clock3} label="種植等待" meta={`${fieldCount} 農田`} value={`${totalCropHours} 小時`} tone="sky" />
+                <MetricCard
+                  icon={Hammer}
+                  label="採集等待"
+                  meta={`${totalMaterialHours} 人工時`}
+                  value={`${gatheringPlan.elapsedHours} 小時`}
+                  tone="rose"
+                />
+              </section>
+              <PlannerResults gatheringPlan={gatheringPlan} plan={plan} salesPlan={salesPlan} />
+            </section>
+          </div>
         )}
       </section>
     </main>
+  );
+}
+
+function SectionHeader({ description, step, title }) {
+  return (
+    <div className="section-heading">
+      <span>{step}</span>
+      <div>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+    </div>
   );
 }

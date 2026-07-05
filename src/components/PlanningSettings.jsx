@@ -1,109 +1,86 @@
-import { Gauge, Settings2, Sprout, UsersRound } from 'lucide-react';
+import { Gauge, Sprout, UsersRound, Wheat } from 'lucide-react';
+import { NumberField, SelectionField } from './FormControls.jsx';
 import { getFieldCountForBusinessLevel, getGuestCapForBusinessLevel } from '../utils/planner.js';
 
 export function PlanningSettings({ gatheringPlan, settings, onChange }) {
+  const fieldCount = getFieldCountForBusinessLevel(settings.businessLevel);
+  const guestCap = getGuestCapForBusinessLevel(settings.businessLevel);
+
   return (
-    <aside className="panel settings-panel">
-      <div className="settings-heading">
-        <div className="panel-icon">
-          <Settings2 aria-hidden="true" size={20} />
+    <section className="settings-workspace">
+      <div className="settings-summary">
+        <div className="settings-level">
+          <span>家業等級</span>
+          <strong>{settings.businessLevel}</strong>
         </div>
-        <div>
-          <h2>規劃設定</h2>
-          <p>先用少量參數估算，後續可改成依客棧等級自動帶入。</p>
+        <div className="settings-insights">
+          <Fact icon={Sprout} label="農田" value={`${fieldCount} 塊`} />
+          <Fact icon={UsersRound} label="莊客上限" value={`${guestCap} 位`} />
+          <Fact icon={Wheat} label="單田種子" value="16 顆" />
+          <Fact label="採集人手" value={`${gatheringPlan?.recommendedGatherers ?? 0} / ${gatheringPlan?.maxGatherers ?? 0} 位`} />
         </div>
       </div>
 
-      <div className="settings-focus">
-        <span>家業等級</span>
-        <strong>{settings.businessLevel}</strong>
-        <small>{getFieldCountForBusinessLevel(settings.businessLevel)} 塊農田，莊客上限 {getGuestCapForBusinessLevel(settings.businessLevel)} 位</small>
-      </div>
-
-      <div className="settings-grid">
-        <div className="settings-group">
-          <div className="settings-group__title">
+      <div className="settings-controls">
+        <div className="control-group">
+          <div className="control-group__title">
             <Gauge aria-hidden="true" size={16} />
-            <span>營運基準</span>
+            <span>營運條件</span>
           </div>
-          <label>
-            <span>家業等級</span>
-            <select value={settings.businessLevel} onChange={(event) => onChange('businessLevel', event.target.value)}>
+          <div className="control-grid">
+            <SelectionField label="家業等級" value={settings.businessLevel} onChange={(value) => onChange('businessLevel', value)}>
               {Array.from({ length: 10 }, (_, index) => index + 1).map((level) => (
                 <option key={level} value={level}>
                   {level} 等，{getFieldCountForBusinessLevel(level)} 塊農田
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
-            <span>販售席位</span>
-            <input
-              max="24"
-              min="1"
-              step="1"
-              type="number"
-              value={settings.seatCount}
-              onChange={(event) => onChange('seatCount', event.target.value)}
-            />
-          </label>
-          <label>
-            <span>週販售時數</span>
-            <input
-              min="1"
-              step="1"
-              type="number"
-              value={settings.weeklySalesHours}
-              onChange={(event) => onChange('weeklySalesHours', event.target.value)}
-            />
-          </label>
+            </SelectionField>
+            <NumberField label="販售席位" max="24" value={settings.seatCount} onChange={(value) => onChange('seatCount', value)} />
+            <NumberField label="週販售時數" value={settings.weeklySalesHours} onChange={(value) => onChange('weeklySalesHours', value)} />
+          </div>
         </div>
 
-        <div className="settings-group settings-group--muted">
-          <div className="settings-group__title">
+        <div className="control-group control-group--soft">
+          <div className="control-group__title">
             <UsersRound aria-hidden="true" size={16} />
             <span>效率假設</span>
           </div>
-          <label>
-            <span>採集效率</span>
-            <select value={settings.materialEfficiencyLevel} onChange={(event) => onChange('materialEfficiencyLevel', event.target.value)}>
+          <div className="control-grid">
+            <SelectionField
+              label="採集效率"
+              value={settings.materialEfficiencyLevel}
+              onChange={(value) => onChange('materialEfficiencyLevel', value)}
+            >
               <option value="1">1 等，102%</option>
               <option value="2">2 等，105%</option>
               <option value="3">3 等，107%</option>
               <option value="4">4 等，110%</option>
-            </select>
-          </label>
-
-          <label>
-            <span>販售員工效率</span>
-            <select value={settings.employeeEfficiencyLevel} onChange={(event) => onChange('employeeEfficiencyLevel', event.target.value)}>
+            </SelectionField>
+            <SelectionField
+              label="販售員工效率"
+              value={settings.employeeEfficiencyLevel}
+              onChange={(value) => onChange('employeeEfficiencyLevel', value)}
+            >
               <option value="1">1 等，102%</option>
               <option value="2">2 等，105%</option>
               <option value="3">3 等，107%</option>
               <option value="4">4 等，110%</option>
-            </select>
-          </label>
-
-          <label className="toggle-row">
-            <input
-              checked={settings.fertilizerEnabled}
-              type="checkbox"
-              onChange={(event) => onChange('fertilizerEnabled', event.target.checked)}
-            />
-            <span>使用肥料，單顆種子產量向上取整後 +10%</span>
-          </label>
+            </SelectionField>
+            <label className="toggle-card">
+              <input
+                checked={settings.fertilizerEnabled}
+                type="checkbox"
+                onChange={(event) => onChange('fertilizerEnabled', event.target.checked)}
+              />
+              <span>
+                <strong>使用肥料</strong>
+                單顆種子產量向上取整後 +10%
+              </span>
+            </label>
+          </div>
         </div>
       </div>
-
-      <div className="fact-strip">
-        <Fact icon={Sprout} label="農田" value={`${getFieldCountForBusinessLevel(settings.businessLevel)} 塊`} />
-        <Fact icon={UsersRound} label="莊客上限" value={`${getGuestCapForBusinessLevel(settings.businessLevel)} 位`} />
-        <Fact label="單田種子" value="16 顆" />
-        <Fact label="採集人手" value={`${gatheringPlan?.recommendedGatherers ?? 0} / ${gatheringPlan?.maxGatherers ?? 0} 位`} />
-        <Fact label="一般素材" value="5 / 小時" />
-        <Fact label="木頭素材" value="10 / 小時" />
-      </div>
-    </aside>
+    </section>
   );
 }
 
